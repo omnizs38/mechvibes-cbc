@@ -58,7 +58,7 @@ let debug = {
           level: log.transports.remote.level,
           identifier: debug.identifier
         };
-        if(debugWindow !== null){
+        if (debugWindow && !debugWindow.isDestroyed()) {
           debugWindow.webContents.send("debug-update", options);
         }
       }else{
@@ -76,10 +76,10 @@ let debug = {
         log.transports.remote.level = false;
         this.enabled = false;
         this.identifier = undefined;
-        fs.unlinkSync(debugConfigFile);
+        fs.removeSync(debugConfigFile);
       }
     }
-    if(win !== null){
+    if (win && !win.isDestroyed()) {
       win.webContents.send("debug-in-use", true);
     }
   },
@@ -88,7 +88,7 @@ let debug = {
     this.identifier = undefined; // clear identifier, for user privacy
     log.transports.remote.level = false;
     log.transports.remote.client.identifier = undefined;
-    fs.unlinkSync(debugConfigFile);
+    fs.removeSync(debugConfigFile);
     // send a request to the ipc server to remove the user's information immediately.
     // NOTE: if the ipc server fails to process the delete request, user logs might not be removed,
     // depending on ipc server implementation. For this reason, users should only use the official ipc server,
@@ -96,12 +96,19 @@ let debug = {
     // https://beta.mechvibes.com/blog/debug-data-retention-policy/
     // transport.clear();
 
-    if(win !== null){
+    if (win && !win.isDestroyed()) {
       win.webContents.send("debug-in-use", false);
     }
   }
 }
 IpcServer.setRemoteUrl(debug.remoteUrl);
+
+function enableDebugSafely() {
+  debug.enable().catch((error) => {
+    debug.enabled = false;
+    log.error(`Remote debugging could not be enabled: ${error}`);
+  });
+}
 
 // Override the default remote logger, to use our own implementation.
 // TODO: you know what, just move everything inside this tbh.
@@ -114,19 +121,21 @@ for (const transportName in log.transports) {
 
 // parse debugging options
 const debugConfigFile = path.join(user_dir, "/remote-debug.json");
-if(fs.existsSync(debugConfigFile)){
-  const json = require(debugConfigFile);
-  console.log(json);
-  if(json.identifier){
-    debug.identifier = json.identifier;
-    if(json.enabled){
-      debug.enable();
-      console.log("enabled?");
+if (fs.existsSync(debugConfigFile)) {
+  try {
+    const json = fs.readJsonSync(debugConfigFile);
+    if (json && typeof json.identifier === 'string') {
+      debug.identifier = json.identifier;
+      if (json.enabled === true) {
+        enableDebugSafely();
+      }
+    } else {
+      fs.removeSync(debugConfigFile);
     }
-  }else{
-    fs.unlinkSync(debugConfigFile);
+  } catch (error) {
+    fs.removeSync(debugConfigFile);
+    log.warn(`Removed invalid remote debug configuration: ${error}`);
   }
-  // log.transports.remote.level = debug.level;
 }
 
 // Default log file paths
@@ -285,6 +294,10 @@ function openInstallWindow(packId){
 
 let debugWindow = null;
 function createDebugWindow(){
+  if (debugWindow && !debugWindow.isDestroyed()) {
+    debugWindow.focus();
+    return;
+  }
   // Create the browser window.
   debugWindow = new BrowserWindow({
     width: 350,
@@ -317,11 +330,6 @@ function createDebugWindow(){
     debugWindow.webContents.send("debug-options", options);
   })
 
-  ipcMain.on("fetch-debug-options", () => {
-    const options = {...debug, path: debugConfigFile};
-    debugWindow.webContents.send("debug-options", options);
-  })
-
   debugWindow.on("ready-to-show", () => {
     debugWindow.show();
   })
@@ -336,16 +344,6 @@ function createDebugWindow(){
 }
 
 const gotTheLock = app.requestSingleInstanceLock();
-app.on('second-instance', () => {
-  // Someone tried to run a second instance, we should focus our window.
-  if (win) {
-    if (process.platform === 'darwin') {
-      app.dock.show();
-    }
-    win.show();
-    win.focus();
-  }
-});
 
 const protocolCommands = {
   install(packId){
@@ -357,9 +355,21 @@ const protocolCommands = {
       installer.webContents.send("install-pack", packId);
     }
   }
-}
-function callProtocolCommand(command, ...args){
-  protocolCommands[command](...args);
+};
+
+function handleProtocolUrl(url) {
+  if (typeof url !== 'string' || !url.toLowerCase().startsWith('mechvibes://')) {
+    return;
+  }
+  try {
+    const parts = decodeURIComponent(url.slice('mechvibes://'.length)).split(' ').filter(Boolean);
+    const command = parts.shift();
+    if (command && Object.prototype.hasOwnProperty.call(protocolCommands, command)) {
+      protocolCommands[command](...parts);
+    }
+  } catch (error) {
+    log.warn(`Ignored invalid Mechvibes protocol URL: ${error}`);
+  }
 }
 
 if (!gotTheLock) {
@@ -370,14 +380,9 @@ if (!gotTheLock) {
     if (win) {
       if (process.platform === 'darwin') {
         app.dock.show();
-      }else{
-        // when we reach this code, we're hitting open-url on win or linux
-        // Note, this doesn't occur on macos, we have to use open-url below.
-        const url = commandLine.pop();
-        const command = decodeURI(url.slice("mechvibes://".length)).split(" ");
-        if(protocolCommands[command[0]]){
-          callProtocolCommand(...command);
-        }
+      } else {
+        const protocolUrl = [...commandLine].reverse().find((argument) => argument.toLowerCase().startsWith('mechvibes://'));
+        handleProtocolUrl(protocolUrl);
       }
       if (win.isMinimized()) {
         win.restore();
@@ -387,12 +392,10 @@ if (!gotTheLock) {
     }
   });
 
-  app.on("open-url", (event, url) => {
-    const command = decodeURI(url.slice("mechvibes://".length)).split(" ");
-    if(protocolCommands[command[0]]){
-      callProtocolCommand(...command);
-    }
-  })
+  app.on('open-url', (event, url) => {
+    event.preventDefault();
+    handleProtocolUrl(url);
+  });
 
   // This method will be called when Electron has finished
   // initialization and is ready to create browser windows.
@@ -411,55 +414,88 @@ if (!gotTheLock) {
       win = createWindow(true);
     }
 
-    if(!mute.is_enabled){
-      iohook.start();
-    }
-
-    let volume = -1; // set to an out-of-bound value to force an update on first run
+    let volume = -1;
     let system_mute = false;
-    let system_volume_error = false;
-    let sys_check_interval = setInterval(() => {
-      if(!mute.is_enabled){
-        getVolume().then((v) => {
-          if(v !== volume){
-            volume = v;
-            win.webContents.send("system-volume-update", volume);
-          }
-        }).catch((err) => {
-          clearInterval(sys_check_interval);
-          if(err == "" && !system_volume_error){
-            // this condition appears to only be hit when using ctrl+c to kill the app during development or on windows
-            system_volume_error = true;
-          }
-          log.error(`Volume Error: ${err}`);
-        });
+    let system_audio_error = false;
+    let system_audio_check_in_flight = false;
 
-        getMute().then((m) => {
-          if(m !== system_mute){
-            system_mute = m;
-            win.webContents.send("system-mute-status", system_mute);
-          }
-        }).catch((err) => {
-          clearInterval(sys_check_interval);
-          if(err == "" && !system_volume_error){
-            // this condition appears to only be hit when using ctrl+c to kill the app during development.
-            system_volume_error = true;
-            OnBeforeQuit();
-            app.exit(1);
-          }
-          log.error(`Mute Error: ${err}`);
-        });
+    const sendToMainWindow = (channel, value) => {
+      if (win && !win.isDestroyed() && !win.webContents.isDestroyed()) {
+        win.webContents.send(channel, value);
       }
-    }, 3000);
-    // NOTE: we could go lower than 3 seconds, but the problem is, the system volume check is slow,
-    // so it's not a good idea to spam the system with requests.
+    };
+
+    let input_hook_running = false;
+    const setInputHookEnabled = (enabled) => {
+      try {
+        if (enabled && !input_hook_running) {
+          iohook.start();
+          input_hook_running = true;
+        } else if (!enabled && input_hook_running) {
+          iohook.stop();
+          input_hook_running = false;
+        }
+        return true;
+      } catch (error) {
+        input_hook_running = false;
+        log.error(`Global keyboard capture failed: ${error}`);
+        sendToMainWindow('input-hook-error', 'Global keyboard capture is unavailable. Restart Mechvibes or reinstall the Windows build.');
+        return false;
+      }
+    };
+
+    ipcMain.on('renderer-ready', (event) => {
+      if (!win || event.sender !== win.webContents) {
+        return;
+      }
+      sendToMainWindow('ava-toggle', active_volume.is_enabled);
+      sendToMainWindow('mechvibes-mute-status', mute.is_enabled);
+      if (volume >= 0) {
+        sendToMainWindow('system-volume-update', volume);
+      }
+      sendToMainWindow('system-mute-status', system_mute);
+      setInputHookEnabled(!mute.is_enabled);
+    });
+
+    const pollSystemAudio = async () => {
+      if (mute.is_enabled || system_audio_check_in_flight) {
+        return;
+      }
+      system_audio_check_in_flight = true;
+      try {
+        const [volumeResult, muteResult] = await Promise.allSettled([getVolume(), getMute()]);
+        if (volumeResult.status === 'fulfilled' && volumeResult.value !== volume) {
+          volume = volumeResult.value;
+          sendToMainWindow('system-volume-update', volume);
+        }
+        if (muteResult.status === 'fulfilled' && muteResult.value !== system_mute) {
+          system_mute = muteResult.value;
+          sendToMainWindow('system-mute-status', system_mute);
+        }
+
+        const failure = volumeResult.status === 'rejected' ? volumeResult.reason
+          : muteResult.status === 'rejected' ? muteResult.reason
+            : null;
+        if (failure !== null && !system_audio_error) {
+          system_audio_error = true;
+          log.warn(`System audio status is temporarily unavailable: ${failure}`);
+        } else if (failure === null) {
+          system_audio_error = false;
+        }
+      } finally {
+        system_audio_check_in_flight = false;
+      }
+    };
+
+    pollSystemAudio();
+    const sys_check_interval = setInterval(pollSystemAudio, 3000);
 
     iohook.on('keydown', (event) => {
-      win.webContents.send("keydown", event);
+      sendToMainWindow('keydown', event);
     });
 
     iohook.on('keyup', (event) => {
-      win.webContents.send("keyup", event);
+      sendToMainWindow('keyup', event);
     });
 
     function createTrayIcon(){
@@ -522,12 +558,8 @@ if (!gotTheLock) {
           checked: mute.is_enabled,
           click: function () {
             mute.toggle();
-            if(!mute.is_enabled){
-              iohook.start();
-            }else{
-              iohook.stop();
-            }
-            win.webContents.send("mechvibes-mute-status", mute.is_enabled);
+            setInputHookEnabled(!mute.is_enabled);
+            sendToMainWindow('mechvibes-mute-status', mute.is_enabled);
           },
         },
         {
@@ -566,6 +598,7 @@ if (!gotTheLock) {
             // stop system check interval, because it's an external program, and
             // it doesn't know how to handle shutdowns.
             clearInterval(sys_check_interval);
+            setInputHookEnabled(false);
             // quit
             app.isQuiting = true;
             app.quit();
@@ -596,54 +629,73 @@ if (!gotTheLock) {
       }
     }
 
-    ipcMain.on("show_tray_icon", (event, show) => {
-      if(show && tray === null){
+    ipcMain.on('show_tray_icon', (_event, show) => {
+      if (show && tray === null) {
         createTrayIcon();
-      }else if(!show && tray !== null){
-        tray.destroy()
+      } else if (!show && tray !== null) {
+        tray.destroy();
         tray = null;
-      }else if(!show && tray === null){
-        createTrayIcon();
       }
-    })
+    });
 
-    ipcMain.on("electron-log", (event, message, level) => {
+    ipcMain.on('electron-log', (event, message, level) => {
+      const allowedLevels = new Set(['error', 'warn', 'info', 'verbose', 'debug', 'silly']);
+      const safeLevel = allowedLevels.has(level) ? level : 'info';
       const window_options = event.sender.browserWindowOptions;
-      if(window_options.name !== undefined && typeof window_options.name == "string"){
-        log.variables.sender = window_options.name
-      }else{
-        log.variables.sender = "u/w"; // unknown window
+      if (window_options.name !== undefined && typeof window_options.name === 'string') {
+        log.variables.sender = window_options.name;
+      } else {
+        log.variables.sender = 'u/w';
       }
-      log[level](message);
-      log.variables.sender = "main"; // reset sender
-    })
+      log[safeLevel](String(message));
+      log.variables.sender = 'main';
+    });
 
-    ipcMain.on("open-debug-options", (event) => {
+    ipcMain.on('open-debug-options', () => {
       createDebugWindow();
-    })
+    });
 
-    ipcMain.on("set-debug-options", (event, json) => {
-      if(json.enabled && !debug.enabled){
-        debug.enable();
-      }else if(!json.enabled && debug.enabled){
+    ipcMain.on('fetch-debug-options', (event) => {
+      if (!debugWindow || debugWindow.isDestroyed() || event.sender !== debugWindow.webContents) {
+        return;
+      }
+      debugWindow.webContents.send('debug-options', { ...debug, path: debugConfigFile });
+    });
+
+    ipcMain.on('set-debug-options', (_event, json) => {
+      if (!json || typeof json.enabled !== 'boolean') {
+        return;
+      }
+      if (json.enabled && !debug.enabled) {
+        enableDebugSafely();
+      } else if (!json.enabled && debug.enabled) {
         debug.disable();
       }
-    })
+    });
 
     // allow the installer to set its size using the height of the body so that when content changes,
     // the installer can only be as big or as small as it needs to be.
-    ipcMain.on("resize-installer", (event, size) => {
+    ipcMain.on('resize-installer', (_event, size) => {
+      if (!installer || installer.isDestroyed()) {
+        return;
+      }
+      const requestedHeight = Math.min(800, Math.max(100, Number(size) || 200));
       const diff = installer.getSize()[1] - installer.getContentSize()[1];
-      log.silly(`Installer requested ${size}, offset is ${diff}, so size is ${(size + diff)}`);
-      installer.setSize(300, size + diff, true);
-    })
-    ipcMain.on("installed", (event, packFolder) => {
+      installer.setSize(300, Math.round(requestedHeight + diff), true);
+    });
+    ipcMain.on('installed', (_event, packFolder) => {
+      if (typeof packFolder !== 'string' || !/^[a-zA-Z0-9._-]+$/.test(packFolder)) {
+        log.warn('Installer returned an invalid soundpack folder.');
+        return;
+      }
       log.silly(`Installed ${packFolder}`);
-      store.set(current_pack_store_id, "custom-" + packFolder);
+      store.set(current_pack_store_id, `custom-${packFolder}`);
       win.reload();
-      installer.close();
+      if (installer && !installer.isDestroyed()) {
+        installer.close();
+      }
       installer = null;
-    })
+    });
 
     log.debug(`Platform: ${process.platform}`);
     log.info("App is ready and has been initialized");
@@ -656,7 +708,7 @@ if (!gotTheLock) {
       });
     }
 
-    if(storage_prompted.is_enabled){
+    if(!storage_prompted.is_enabled){
       // check if old custom directory exists
       const home_dir = app.getPath('home');
       const old_custom_dir = path.join(home_dir, "/mechvibes_custom");
@@ -683,11 +735,14 @@ if (!gotTheLock) {
           });
           log.silly("Removing old custom directory...");
           fs.removeSync(old_custom_dir);
+          storage_prompted.enable();
           log.debug("Migration complete.");
           win.reload();
-        }else if(response === 2){
+        } else if (response === 2) {
           storage_prompted.enable();
         }
+      } else {
+        storage_prompted.enable();
       }
     }
   });
@@ -729,10 +784,8 @@ function OnBeforeQuit(){
 }
 app.on("before-quit", OnBeforeQuit);
 
-// always be sure that your application handles the 'quit' event in your main process
 app.on('quit', () => {
-  log.silly("Goodbye.");
-  app.quit();
+  log.silly('Goodbye.');
 });
 
 var editor_window = null;

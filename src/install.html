@@ -43,15 +43,15 @@
 			</tr>
 			<tr id="ask" class="hide">
 				<td>
-					<button id="answer-yes" class="button">Install</button>
-					<button id="answer-no" class="button button-secondary" style="margin:0;">Cancel</button>
+					<button type="button" id="answer-yes" class="button">Install</button>
+					<button type="button" id="answer-no" class="button button-secondary" style="margin:0;">Cancel</button>
 				</td>
 			</tr>
 			<tr id="prog" class="hide">
 				<td>
-					<small id="status-text">Downloading...</small>
+					<small id="status-text" role="status" aria-live="polite">Downloading...</small>
 					<div class="progress">
-						<div id="prog-bar" class="progress-bar"></div>
+						<div id="prog-bar" class="progress-bar" role="progressbar" aria-label="Soundpack installation progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
 					</div>
 				</td>
 			</tr>

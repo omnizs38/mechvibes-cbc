@@ -10,16 +10,17 @@
   </head>
 
   <body style="padding: 2rem; padding-bottom: 0;">
-    <div id="app-logo">
+    <div id="app-logo" aria-hidden="true">
       <div id="logo">Loading...</div>
     </div>
+    <p id="app-status" class="status hidden" role="status" aria-live="polite"></p>
 
-    <div id="app-body" class="loading">
+    <main id="app-body" class="loading">
       <div style="position: relative;text-align: center;font-size: 12px;">
-        <div id="mechvibes-muted" class="hidden alert" style="position:absolute;top:-36px;left:0;right:0;">
+        <div id="mechvibes-muted" class="hidden alert" role="status" aria-live="polite" style="position:absolute;top:-36px;left:0;right:0;">
           Mechvibes is currently muted.
         </div>
-        <div id="system-muted" class="hidden alert" style="position:absolute;top:-36px;left:0;right:0;">
+        <div id="system-muted" class="hidden alert" role="status" aria-live="polite" style="position:absolute;top:-36px;left:0;right:0;">
           Your system sounds are currently muted.
         </div>
       </div>
@@ -27,10 +28,11 @@
         <tbody>
           <tr>
             <td colspan="2">
+              <label for="pack-list" class="sr-only">Soundpack</label>
               <select id="pack-list" class="custom-input mb-0" style="width: 100%; margin-right: 10px"></select>
               <div style="display: flex; justify-content: space-between;">
                 <small>
-                  <a id="random-button" style="cursor: pointer">Set random sound</a>
+                  <button type="button" id="random-button" class="link-button">Set random sound</button>
                 </small>
                 <small>
                   <a href="https://mechvibes.com/sound-packs/" class="open-in-browser">More sounds...</a>
@@ -39,12 +41,15 @@
             </td>
           </tr>
           <tr>
-            <td style="width: 50%;padding-top:0;padding-bottom: 0;">Volume <span id="volume-value-display" style="font-weight: bold"></span></td>
+            <td colspan="2" style="padding-top:0;padding-bottom: 0;">
+              <label for="volume">Volume <output id="volume-value-display" style="font-weight: bold"></output></label>
+            </td>
           </tr>
           <tr>
             <td colspan="2" style="padding-top:0;padding-bottom:0;">
-              <input type="range" min="0" max="200" value="20" step="5" class="slider mb-0" id="volume" style="width: 100%" />
-              <div class="warning-levels">
+              <input type="range" min="0" max="200" value="20" step="5" class="slider mb-0" id="volume" style="width: 100%" aria-describedby="volume-help" />
+              <span id="volume-help" class="sr-only">Use the arrow keys to adjust volume in five percent increments.</span>
+              <div class="warning-levels" aria-hidden="true">
                 <div class="warning-level" style="width: 50%"></div>
                 <div class="warning-level" style=""></div>
                 <div class="warning-level" style=""></div>
@@ -52,11 +57,11 @@
               </div>
             </td>
           </tr>
-          <tr class="checkbox-group" id="tray_icon_toggle_group">
-            <td style="width: 50%">Show Tray Icon</td>
+          <tr class="checkbox-group">
+            <td style="width: 50%"><label for="tray_icon_toggle">Show Tray Icon</label></td>
             <td style="width: 50%">
               <div style="display:grid;grid-template-columns: 1em auto;font-size: 2rem;justify-content:right;">
-                <input type="checkbox" class="checkbox mb-0" id="tray_icon_toggle" checked/>
+                <input type="checkbox" class="checkbox mb-0" id="tray_icon_toggle" checked />
               </div>
             </td>
           </tr>
@@ -74,22 +79,22 @@
             it's important to remember that users can *always* disable remote debugging
             via the link in div#remote-in-use
           -->
-          <span id="debug-options-seperator" class="hidden">|</span>
-          <a href="#" id="open-debug-options" class="hidden">Advanced</a>
+          <span id="debug-options-seperator" class="hidden" aria-hidden="true">|</span>
+          <button type="button" id="open-debug-options" class="hidden link-button">Advanced</button>
         </div>
         <p id="app-version" style="color: #999">-</p>
         <div style="position: relative;">
-          <div id="update-available" class="hidden alert">
+          <div id="update-available" class="hidden alert" role="status" aria-live="polite">
             New version of Mechvibes is available (<span id="new-version">-</span>)
             <div style="margin-top: 5px">
               <a href="https://mechvibes.com/download/" class="open-in-browser">Check it out</a>
             </div>
           </div>
-          <div id="remote-in-use" class="hidden alert" style="position: absolute;top:-66px;left:0;right:0;padding:0;">
-            <a href="#" id="quick-disable-remote">Click here</a> to disable remote debugging.
+          <div id="remote-in-use" class="hidden alert" role="alert" style="position: absolute;top:-66px;left:0;right:0;padding:0;">
+            <button type="button" id="quick-disable-remote" class="link-button">Disable remote debugging</button>
           </div>
         </div>
       </div>
-    </div>
+    </main>
   </body>
 </html>

@@ -1,134 +1,193 @@
-const fs = require('fs');
-const { shell, remote, ipcRenderer } = require('electron');
-const BASE_URL = "https://www.mechvibes.com/sound-packs";
+'use strict';
+
+const fs = require('fs-extra');
+const path = require('path');
+const { remote, ipcRenderer } = require('electron');
+const { listReferencedSoundFiles, validateSoundpackConfig } = require('./libs/soundpacks/validation');
+const {
+  MAX_FILE_BYTES,
+  commitDirectoryReplacement,
+  enforceDownloadSize,
+  parseContentLength,
+  readResponseBuffer,
+  validateInstallationManifest,
+} = require('./utils/installer');
+
+const BASE_URL = 'https://www.mechvibes.com/sound-packs';
 const CUSTOM_PACKS_DIR = remote.getGlobal('custom_dir');
+const REQUEST_TIMEOUT_MS = 20000;
+const MANIFEST_MAX_BYTES = 1024 * 1024;
 
 const errorTranslation = {
-	400: "INVREQ",
-	401: "UNAUTH",
-	402: "PAYMENT",
-	403: "FORBID",
-	404: "NOTFOUND",
-	405: "BADMETH",
-	418: "TEAPOT",
-	429: "TOOFAST",
-	451: "DMCA",
-	500: "SERVERR",
-	502: "SERVBAD",
-	503: "SERVUNAV",
-	504: "SERVSLOW",
-	521: "SERVOFF",
-	522: "SERVSLOW",
-	523: "SERVOFF",
-	524: "SERVSLOW",
-	525: "SERVSSL",
-	526: "SERVSSL"
+  400: 'INVREQ',
+  401: 'UNAUTH',
+  402: 'PAYMENT',
+  403: 'FORBID',
+  404: 'NOTFOUND',
+  405: 'BADMETH',
+  418: 'TEAPOT',
+  429: 'TOOFAST',
+  451: 'DMCA',
+  500: 'SERVERR',
+  502: 'SERVBAD',
+  503: 'SERVUNAV',
+  504: 'SERVSLOW',
+  521: 'SERVOFF',
+  522: 'SERVSLOW',
+  523: 'SERVOFF',
+  524: 'SERVSLOW',
+  525: 'SERVSSL',
+  526: 'SERVSSL',
+};
+
+function resizeWindow() {
+  setTimeout(() => {
+    ipcRenderer.send('resize-installer', document.scrollingElement.scrollHeight);
+  }, 5);
 }
 
-function resizeWindow(){
-	// ensure a render tick has occured before we resize,
-	// so that we know we're resizing to the right size.
-	setTimeout(() => {
-		ipcRenderer.send("resize-installer", document.scrollingElement.scrollHeight);
-	},5)
+function displayError(element, error) {
+  element.textContent = `Error: ${error instanceof Error ? error.message : String(error)}`;
+  element.setAttribute('role', 'alert');
+  resizeWindow();
 }
-let lock = false;
-ipcRenderer.on("install-pack", (event, packId) => {
-	lock = true;
-	const logo = document.getElementById("logo");
-	const packageNameSection = document.getElementById("package-section");
-	const packageNameHolder = document.getElementById("package-name");
-	const askPrompt = document.getElementById("ask");
 
-	let installation;
-	const PACK_URL = `${BASE_URL}/${packId}/dist`;
-	
-	fetch(`${PACK_URL}/install.json`).then((response) => {
-		console.log(response);
-		console.log(response.ok);
-		if(response.ok){
-			response.json().then((data) => {
-				installation = data;
-				logo.innerText = "Sound Pack";
-				packageNameHolder.innerText = data.name;
-				packageNameSection.style.display = "block";
-				askPrompt.style.display = "block";
-				resizeWindow();
-			}).catch((r) => {
-				// json parse error
-				// NOTE: in theory this shouldn't happen.
-				lock = false;
-				logo.innerText = `Error (PARSE)`;
-			});
-		}else{
-			lock = false;
-			if(errorTranslation[response.status]){
-				logo.innerText = `Error (${errorTranslation[response.status]})`;
-			}else{
-				logo.innerText = `Error (UNKNOWN)`;
-			}
-		}
-	})
+async function fetchWithTimeout(url, consume) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+    return await consume(response);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
-	const yesBtn = document.getElementById("answer-yes");
-	const noBtn = document.getElementById("answer-no");
-	yesBtn.onclick = () => {
-		const progStatus = document.getElementById("status-text");
-		const progSection = document.getElementById("prog");
-		const progBar = document.getElementById("prog-bar");
-		askPrompt.style.display = "none";
+async function downloadFile(url, destination, currentTotal) {
+  return fetchWithTimeout(url, async (response) => {
+    if (!response.ok) {
+      const code = errorTranslation[response.status] || `HTTP ${response.status}`;
+      throw new Error(`Download failed (${code}).`);
+    }
 
-		const INSTALL_DIR = `${CUSTOM_PACKS_DIR}/${installation.folder}`;
-		if(!fs.existsSync(INSTALL_DIR)){
-			fs.mkdirSync(INSTALL_DIR);
-		}
-		
-		setTimeout(async () => {
-			progSection.style.display = "block";
-			resizeWindow();
-			let progress = 0;
-			let error = null;
-			for (const i in installation.files) {
-				const file = installation.files[i];
-				progStatus.innerText = `Downloading ${file}...`;
-				const request = await fetch(`${PACK_URL}/${file}`);
-				if(!request.ok){
-					error = {
-						status:request.status,
-						file:file
-					};
-					break;
-				}
-				const blob = await request.blob();
-				const arrayBuffer = await blob.arrayBuffer();
-				const buffer = Buffer.from(arrayBuffer);
-				fs.writeFileSync(`${INSTALL_DIR}/${file}`, buffer);
+    const advertisedSize = parseContentLength(response);
+    if (advertisedSize !== null) {
+      enforceDownloadSize({ fileBytes: advertisedSize, totalBytes: currentTotal + advertisedSize });
+    }
+    const buffer = await readResponseBuffer(response, MAX_FILE_BYTES);
+    enforceDownloadSize({ fileBytes: buffer.length, totalBytes: currentTotal + buffer.length });
+    fs.ensureDirSync(path.dirname(destination));
+    fs.writeFileSync(destination, buffer, { flag: 'wx' });
+    return buffer.length;
+  });
+}
 
-				progress = ((Number(i) + 1) / installation.files.length) * 100;
-				progBar.style.width = `${progress}%`;
-			}
+function validateDownloadedPack(directory) {
+  const configPath = path.join(directory, 'config.json');
+  if (!fs.existsSync(configPath) || fs.statSync(configPath).size > MANIFEST_MAX_BYTES) {
+    throw new Error('Downloaded soundpack has an invalid config.json.');
+  }
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  validateSoundpackConfig(config);
+  for (const reference of listReferencedSoundFiles(config)) {
+    const filePath = path.join(directory, ...reference.split('/'));
+    if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+      throw new Error(`Downloaded soundpack is missing ${reference}.`);
+    }
+  }
+}
 
-			if(error !== null){
-				lock = false;
-				if(errorTranslation[error.status]){
-					progStatus.innerText = `Failed to download ${error.file} (${errorTranslation[error.status]})`;
-				}else{
-					progStatus.innerText = `Failed to download ${error.file} (UNKNOWN)`;
-				}
-			}else{
-				progStatus.innerText = "Installing...";
-				ipcRenderer.send("installed", installation.folder);
-			}
-		},50)
-	}
-	noBtn.onclick = () => {
-		window.close();
-	}
+function commitInstallation(tempDirectory, folder) {
+  const installDirectory = path.join(CUSTOM_PACKS_DIR, folder);
+  commitDirectoryReplacement(fs, {
+    tempDirectory,
+    installDirectory,
+    backupDirectory: `${installDirectory}.backup-${Date.now()}`,
+  });
+}
 
-	console.log("Attempting to install...")
-	console.log(packId);
-})
+let installation = null;
+let packUrl = null;
+let installing = false;
 
-ipcRenderer.on("resize-done", (event) => {
-	console.log()
-})
+ipcRenderer.on('install-pack', async (_event, packId) => {
+  const logo = document.getElementById('logo');
+  const packageNameSection = document.getElementById('package-section');
+  const packageNameHolder = document.getElementById('package-name');
+  const askPrompt = document.getElementById('ask');
+  const yesButton = document.getElementById('answer-yes');
+  const noButton = document.getElementById('answer-no');
+
+  try {
+    if (typeof packId !== 'string' || !/^[a-zA-Z0-9._-]+$/.test(packId)) {
+      throw new Error('Invalid soundpack identifier.');
+    }
+    packUrl = `${BASE_URL}/${encodeURIComponent(packId)}/dist`;
+    const manifestBuffer = await fetchWithTimeout(`${packUrl}/install.json`, async (response) => {
+      if (!response.ok) {
+        throw new Error(`Manifest request failed (${errorTranslation[response.status] || `HTTP ${response.status}`}).`);
+      }
+      return readResponseBuffer(response, MANIFEST_MAX_BYTES);
+    });
+    installation = validateInstallationManifest(JSON.parse(manifestBuffer.toString('utf8')));
+
+    logo.textContent = 'Sound Pack';
+    packageNameHolder.textContent = installation.name;
+    packageNameSection.style.display = 'block';
+    askPrompt.style.display = 'block';
+    resizeWindow();
+  } catch (error) {
+    installation = null;
+    displayError(logo, error);
+  }
+
+  yesButton.onclick = async () => {
+    if (installing || installation === null) {
+      return;
+    }
+    installing = true;
+    yesButton.disabled = true;
+    noButton.disabled = true;
+
+    const progressStatus = document.getElementById('status-text');
+    const progressSection = document.getElementById('prog');
+    const progressBar = document.getElementById('prog-bar');
+    const tempDirectory = path.join(CUSTOM_PACKS_DIR, `.install-${installation.folder}-${Date.now()}`);
+    let totalBytes = 0;
+
+    askPrompt.style.display = 'none';
+    progressSection.style.display = 'block';
+    resizeWindow();
+
+    try {
+      fs.ensureDirSync(tempDirectory);
+      for (let index = 0; index < installation.files.length; index += 1) {
+        const file = installation.files[index];
+        progressStatus.textContent = `Downloading ${file}…`;
+        const destination = path.join(tempDirectory, ...file.split('/'));
+        totalBytes += await downloadFile(`${packUrl}/${file.split('/').map(encodeURIComponent).join('/')}`, destination, totalBytes);
+        const progress = ((index + 1) / installation.files.length) * 100;
+        progressBar.style.width = `${progress}%`;
+        progressBar.setAttribute('aria-valuenow', String(Math.round(progress)));
+      }
+
+      progressStatus.textContent = 'Validating soundpack…';
+      validateDownloadedPack(tempDirectory);
+      commitInstallation(tempDirectory, installation.folder);
+      progressStatus.textContent = 'Installed.';
+      ipcRenderer.send('installed', installation.folder);
+    } catch (error) {
+      fs.removeSync(tempDirectory);
+      displayError(progressStatus, error);
+      yesButton.disabled = false;
+      noButton.disabled = false;
+      installing = false;
+    }
+  };
+
+  noButton.onclick = () => {
+    if (!installing) {
+      window.close();
+    }
+  };
+});

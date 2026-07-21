@@ -1,187 +1,100 @@
-/**
- * Soundpack configuration version 1
- * 
- */
+'use strict';
 
 const { Howl } = require('howler');
 const { keycodesRemap, keycodesFill } = require('../keycodes');
-const { GetSoundpackFile } = require('./file-manager');
+const { loadHowls, loadSharedHowls } = require('./audio-loader');
+const { ClearSoundpackCache, GetSoundpackFile } = require('./file-manager');
+const { resolveSoundReference } = require('./reference-resolver');
+const { expandNumberTemplate } = require('./validation');
 
 class SoundpackConfig {
-	/**
-	 * 
-	 * @param {object} config the decoded json of the soundpack config.json
-	 * @param {object} meta calculated metadata about the soundpack
-	 */
-	constructor(config, meta) {
-		this.name = config.name ?? null;
-		this.key_define_type = config.key_define_type ?? null;
-		this.sound = config.sound ?? null;
-		this.soundup = config.soundup ?? null;
-		this.defines = config.defines ?? null;
+  constructor(config, meta) {
+    this.name = config.name;
+    this.key_define_type = config.key_define_type;
+    this.sound = config.sound;
+    this.soundup = config.soundup;
+    this.defines = { ...config.defines };
 
-		this.pack_id = meta.pack_id ?? null;
-		this.group = meta.group ?? null;
-		this.abs_path = meta.abs_path ?? null;
-		this.is_archive = meta.is_archive ?? null;
-		this.is_custom = meta.is_custom ?? null;
+    this.pack_id = meta.pack_id;
+    this.group = meta.group;
+    this.abs_path = meta.abs_path;
+    this.is_archive = meta.is_archive;
+    this.is_custom = meta.is_custom;
+    this.version = 2;
+    this.loadingPromise = null;
 
-		// check all the keys for any null values and throw an error if there are any
-		for (let key in this) {
-			if (this[key] === null) {
-				throw new Error(`SoundpackConfig: Missing required property: ${key}`);
-			}
-		}
+    for (const keycode of Object.keys(keycodesFill(this.defines))) {
+      const upKey = `${keycode}-up`;
+      this.defines[keycode] = expandNumberTemplate(this.defines[keycode] || this.sound);
+      this.defines[upKey] = expandNumberTemplate(this.defines[upKey] || this.soundup);
+    }
+  }
 
-		Object.keys(keycodesFill(this.defines)).map((kc) => {
-			const upkey = `${kc}-up`;
-			const downkey = kc;
+  LoadSounds() {
+    if (this.audio !== undefined) {
+      return Promise.resolve();
+    }
+    if (this.loadingPromise !== null) {
+      return this.loadingPromise;
+    }
 
-			const setSound = (sound, key) => {
-				if (sound.indexOf('{') >= 0) {
-					// sound path contains a number range of {1-10}, so pick a random number from that and replace it
-					const range = sound.match(/\{(.+?)\}/g)[0];
-					const range_values = range.replace("{", "").replace("}", "").split("-");
-					const random_number = Math.floor(Math.random() * (range_values[1] - range_values[0] + 1) + range_values[0]);
-					sound = sound.replace(range, random_number);
-				}
-				this.defines[key] = sound;
-			}
+    this.loadingPromise = this.loadSoundsInternal().finally(() => {
+      this.loadingPromise = null;
+    });
+    return this.loadingPromise;
+  }
 
-			setSound(this.defines[downkey] ?? this.sound, downkey);
-			setSound(this.defines[upkey] ?? this.soundup, upkey);
-		});
+  async loadSoundsInternal() {
+    if (this.key_define_type === 'single') {
+      const sound = GetSoundpackFile(this.abs_path, this.sound);
+      const audio = new Howl({ src: [sound], sprite: keycodesRemap(this.defines) });
+      const loaded = await loadHowls([{ key: 'audio', audio }]);
+      this.audio = loaded.audio;
+      return;
+    }
 
-		this.version = 2;
-	}
+    const soundData = {};
+    for (const [keycode, soundReference] of Object.entries(this.defines)) {
+      if (!soundReference) {
+        continue;
+      }
+      const fallback = keycode.endsWith('-up') ? this.soundup : this.sound;
+      const source = resolveSoundReference(
+        soundReference,
+        fallback,
+        (reference) => GetSoundpackFile(this.abs_path, reference),
+      );
+      soundData[keycode] = { src: [source] };
+    }
+    const remapped = keycodesRemap(soundData);
+    this.audio = await loadSharedHowls(remapped, (options) => new Howl(options));
+  }
 
+  HandleEvent(event) {
+    const keycode = event.type === 'keyup' ? `${event.keycode}-up` : event.keycode;
+    const soundId = `keycode-${keycode}`;
+    const sound = this.key_define_type === 'single' ? this.audio : this.audio[soundId];
+    if (!sound) {
+      return;
+    }
+    if (this.key_define_type === 'single') {
+      sound.play(soundId);
+    } else {
+      sound.play();
+    }
+  }
 
-
-	/**
-	 * Load the sounds into memory
-	 */
-	LoadSounds(){
-		return new Promise((resolve, reject) => {
-			let beforeReject = (e) => {
-				// delete this.sound_data;
-				if(this.key_define_type == "single"){
-					if(this.audio){
-						this.audio.unload();
-						delete this.audio;
-					}
-				}else if(this.key_define_type == "multi"){
-					if(this.audio){
-						Object.keys(this.audio).map((kc) => {
-							this.audio[kc].unload();
-						});
-						delete this.audio;
-					}
-				}
-				reject(e);
-			}
-			let timeout = setTimeout(() => {
-				beforeReject("The soundpack took too long to load.");
-			}, 3000);
-
-			let wait = (audio) => {
-				return new Promise((res, rej) => {
-					if(audio.state() == "loaded"){
-						res();
-					}else{
-						audio.once('load', () => {
-							res();
-						})
-						audio.once('loaderror', (e) => {
-							rej(e);
-						})
-					}
-				});
-			}
-
-			if(this.key_define_type == "single"){
-				// define sound path
-				const sound = GetSoundpackFile(this.abs_path, this.sound);
-				const sound_data = { src: [sound], sprite: keycodesRemap(this.defines) };
-
-				const audio = new Howl(sound_data);
-				wait(audio).then(() => {
-					clearTimeout(timeout);
-					this.audio = audio;
-					resolve();
-				}).catch((e) => {
-					beforeReject(e);
-				})
-			}else if(this.key_define_type == "multi"){
-				let sound_data = {};
-				Object.keys(this.defines).map((kc) => {
-					if (this.defines[kc]) {
-						// define sound path
-						const sound = GetSoundpackFile(this.abs_path, this.defines[kc]);
-						sound_data[kc] = { src: [sound] };
-					}
-				});
-				this.audio = {};
-				sound_data = keycodesRemap(sound_data);
-				Object.keys(sound_data).map((kc) => {
-					const audio = new Howl(sound_data[kc]);
-					wait(audio).then(() => {
-						clearTimeout(timeout);
-						this.audio[kc] = audio;
-						resolve();
-					}).catch((e) => {
-						beforeReject(e);
-					})
-				})
-			}else{
-				beforeReject("Invalid key_define_type");
-			}
-
-		});
-	}
-
-	/**
-	 * Handle a sound event from the playSound function.
-	 * @param {object} event the event object containing the keycode and type
-	 * @property {string} event.type the type of the event, either "keydown" or "keyup"
-	 * @property {number} event.keycode the keycode of the key that was pressed
-	 */
-	HandleEvent(event){
-		let keycode = event.keycode;
-		if(event.type == "keyup"){
-			keycode = `${keycode}-up`;
-		}
-		const sound_id = `keycode-${keycode}`;
-		const play_type = this.key_define_type ? this.key_define_type : 'single';
-		const sound = play_type == 'single' ? this.audio : this.audio[sound_id];
-		if (!sound) {
-			return;
-		}
-
-		if (play_type == 'single') {
-			sound.play(sound_id);
-			console.log(this.audio);
-		} else {
-			sound.play();
-		}
-	}
-
-	/**
-	 * Unload the sounds from memory
-	 */
-	UnloadSounds(){
-		if(this.audio){
-			if(this.key_define_type == "single"){
-				this.audio.unload();
-				delete this.audio;
-			}else if(this.key_define_type == "multi"){
-				Object.keys(this.audio).map((kc) => {
-					this.audio[kc].unload();
-				});
-				delete this.audio;
-				console.log("unloaded");
-			}
-		}
-	}
+  UnloadSounds() {
+    if (this.audio !== undefined) {
+      if (this.key_define_type === 'single') {
+        this.audio.unload();
+      } else {
+        new Set(Object.values(this.audio)).forEach((audio) => audio.unload());
+      }
+      delete this.audio;
+    }
+    ClearSoundpackCache(this.abs_path);
+  }
 }
 
 module.exports = SoundpackConfig;

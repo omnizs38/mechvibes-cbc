@@ -11,7 +11,13 @@
     "build:win": "electron-builder -w",
     "build:mac": "electron-builder -m",
     "build:linux": "electron-builder -l",
-    "build:clean": "node tools/clean-dist.js"
+    "build:clean": "node tools/clean-dist.js",
+    "check": "node tools/check-syntax.js",
+    "test": "node tests/run.js",
+    "verify": "npm run check && npm test"
+  },
+  "engines": {
+    "node": ">=14 <17"
   },
   "keywords": [],
   "homepage": "https://mechvibes.com",

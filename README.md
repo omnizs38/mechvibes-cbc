@@ -65,15 +65,18 @@ _This repository will remain available during the transition period._
 - Enjoy!
 
 ## Compile from Source
-Prefer to build the app yourself? 
-Follow these steps:
-- Clone the repository from GitHub.
-- Run the appropriate build command for your system:
-  - For macOS: `yarn build:mac`
-  - For Windows: `yarn build:win`
-  - For Linux: `yarn build:linux`
 
-That’s it, your app is ready to use!
+Use Node.js 16.20.2 (see `.nvmrc`) and the committed npm lockfile:
+
+```sh
+npm ci
+npm run verify
+npm start
+```
+
+Build an installer for your platform with `npm run build:win`, `npm run build:mac`, or `npm run build:linux`.
+
+Windows stability changes must pass the automated workflow and the [Windows critical-fix verification matrix](docs/windows-critical-fixes.md) before release.
 
 ## Have Feedback or Suggestions?
 We’d love to hear from you! 🤝 Got an idea or ran into an issue? Feel free to share. It’s always appreciated!
