@@ -32,7 +32,7 @@
     "name": "Hai Nguyen",
     "email": "hainguyen.ts13@gmail.com"
   },
-  "license": "MIT",
+  "license": "MPL-2.0",
   "build": {
     "appId": "com.electron.mechvibes",
     "artifactName": "Mechvibes-${version}-${arch}.${ext}",
