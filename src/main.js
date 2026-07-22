@@ -14,6 +14,7 @@ const iohook = require('uiohook-napi').uIOhook;
 
 const StartupHandler = require('./utils/startup_handler');
 const StoreToggle = require('./utils/store_toggle');
+const { resolveLogSenderName } = require('./utils/log-sender');
 const { HotkeyTracker } = require('./services/hotkey-tracker');
 const { UpdateService } = require('./services/update-service');
 
@@ -775,12 +776,7 @@ if (!gotTheLock) {
     ipcMain.on('electron-log', (event, message, level) => {
       const allowedLevels = new Set(['error', 'warn', 'info', 'verbose', 'debug', 'silly']);
       const safeLevel = allowedLevels.has(level) ? level : 'info';
-      const window_options = event.sender.browserWindowOptions;
-      if (window_options.name !== undefined && typeof window_options.name === 'string') {
-        log.variables.sender = window_options.name;
-      } else {
-        log.variables.sender = 'u/w';
-      }
+      log.variables.sender = resolveLogSenderName(event);
       log[safeLevel](String(message));
       log.variables.sender = 'main';
     });

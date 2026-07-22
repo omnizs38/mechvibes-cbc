@@ -29,6 +29,7 @@ const {
   validateInstallationManifest,
 } = require('../src/utils/installer');
 const { chooseRandomPackIndex } = require('../src/utils/random-pack');
+const { resolveLogSenderName } = require('../src/utils/log-sender');
 const { calculateAdjustedDisplay, calculateGain } = require('../src/utils/volume');
 const { HotkeyTracker } = require('../src/services/hotkey-tracker');
 const { UpdateService, normalizeReleaseNotes } = require('../src/services/update-service');
@@ -274,6 +275,18 @@ test('chooses a different random pack without recursion', () => {
   assert.equal(chooseRandomPackIndex([packs[0]], 'a', () => 0), null);
   assert.equal(chooseRandomPackIndex(packs, 'a', () => 0), 1);
   assert.equal(chooseRandomPackIndex(packs, 'a', () => 0.9999), 2);
+});
+
+test('resolves the electron-log sender label without crashing on undefined window options', () => {
+  // Regression: `event.sender.browserWindowOptions` is undefined for webContents
+  // not created directly via `new BrowserWindow(...)`. Dereferencing `.name`
+  // without guarding the options object threw a TypeError and crashed startup.
+  assert.equal(resolveLogSenderName({ sender: { browserWindowOptions: undefined } }), 'u/w');
+  // A webContents that exposes options but without a string name also falls back.
+  assert.equal(resolveLogSenderName({ sender: { browserWindowOptions: {} } }), 'u/w');
+  assert.equal(resolveLogSenderName({ sender: { browserWindowOptions: { name: 42 } } }), 'u/w');
+  // The working case keeps returning the configured window name.
+  assert.equal(resolveLogSenderName({ sender: { browserWindowOptions: { name: 'main' } } }), 'main');
 });
 
 test('selects v3 samples without immediate repeats', () => {
