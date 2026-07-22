@@ -1,7 +1,7 @@
 {
   "name": "mechvibes",
   "productName": "Mechvibes",
-  "version": "2.4.0-beta.1",
+  "version": "2.4.0-beta.2",
   "description": "Low-latency mechanical keyboard sound engine for Windows.",
   "repository": "https://github.com/omnizs38/mechvibes",
   "main": "src/main.js",

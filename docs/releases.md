@@ -8,6 +8,10 @@
 4. Keep the workflow token at its default read-only scope; the protected publish job requests `contents: write` only after approval.
 5. Do not add signing certificates or passwords until Windows signing is intentionally configured.
 
+## Prepared beta candidate
+
+The next candidate is `2.4.0-beta.2`. Review its [release notes](release-notes-2.4.0-beta.2.md), merge the release preparation branch, and tag the resulting `main` commit as `v2.4.0-beta.2`. Do not tag the unmerged release branch.
+
 ## Beta release
 
 1. Set `package.json` and both package-lock version fields to `2.4.0-beta.N`.

@@ -157,7 +157,7 @@ async function runRendererSmoke(repositoryRoot, { expectedHowlCount = 0, expecte
           return {
             status: 'development',
             channel: 'beta',
-            currentVersion: '2.4.0-beta.1',
+            currentVersion: '2.4.0-beta.2',
             availableVersion: null,
             releaseNotes: '',
             progress: null,
@@ -170,7 +170,7 @@ async function runRendererSmoke(repositoryRoot, { expectedHowlCount = 0, expecte
     remote: {
       getGlobal(name) {
         return {
-          app_version: '2.4.0-beta.1',
+          app_version: '2.4.0-beta.2',
           current_pack_store_id: 'mechvibes-pack',
           custom_dir: customDirectory,
         }[name];
@@ -270,7 +270,7 @@ async function runRendererSmoke(repositoryRoot, { expectedHowlCount = 0, expecte
   global.fetch = async (url) => ({
     ok: true,
     status: 200,
-    json: async () => ({ tag_name: 'v2.4.0-beta.1' }),
+    json: async () => ({ tag_name: 'v2.4.0-beta.2' }),
     text: async () => url.includes('/debug/status/') ? 'disabled' : '',
   });
 

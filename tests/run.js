@@ -725,7 +725,7 @@ test('requires consent before downloading and installing updates', async () => {
   const states = [];
   const service = new UpdateService({
     autoUpdater: updater,
-    app: { isPackaged: true, getVersion: () => '2.4.0-beta.1' },
+    app: { isPackaged: true, getVersion: () => '2.4.0-beta.2' },
     log: { warn() {} },
     send: (_channel, state) => states.push(state),
     store: {
@@ -746,12 +746,12 @@ test('requires consent before downloading and installing updates', async () => {
   assert.equal(service.getState().channel, 'beta');
   assert.equal(updater.downloadCalls, 0);
 
-  updater.emit('update-available', { version: '2.4.0-beta.2', releaseNotes: 'Faster audio' });
+  updater.emit('update-available', { version: '2.4.0-beta.3', releaseNotes: 'Faster audio' });
   assert.equal(service.getState().status, 'available');
   assert.equal(updater.downloadCalls, 0);
   await service.download();
   assert.equal(updater.downloadCalls, 1);
-  updater.emit('update-downloaded', { version: '2.4.0-beta.2' });
+  updater.emit('update-downloaded', { version: '2.4.0-beta.3' });
   service.install();
   assert.equal(updater.installCalls, 1);
   assert.deepEqual(updater.installArguments, [false, true]);
