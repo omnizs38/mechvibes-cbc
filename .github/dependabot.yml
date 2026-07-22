@@ -4,18 +4,70 @@ updates:
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+      day: monday
+    open-pull-requests-limit: 10
     labels:
       - dependencies
     commit-message:
       prefix: deps
+      prefix-development: deps-dev
+      include: scope
+    versioning-strategy: increase
+    groups:
+      # Patch/minor updates are low-risk: batch them into one PR per group
+      # per run so CI only has to prove one combined diff, not N separate ones.
+      dev-tooling-patch-minor:
+        applies-to: version-updates
+        dependency-type: development
+        update-types:
+          - patch
+          - minor
+      production-patch-minor:
+        applies-to: version-updates
+        dependency-type: production
+        update-types:
+          - patch
+          - minor
+    ignore:
+      # Electron itself and the packaging toolchain are release-critical and
+      # version-pinned deliberately (see docs/releases.md and the electron
+      # version this fork's Windows build/signing pipeline is validated
+      # against). Bump these by hand, in a reviewed release branch, not via
+      # an automatic Dependabot PR.
+      - dependency-name: "electron"
+      - dependency-name: "electron-builder"
+        update-types:
+          - "version-update:semver-major"
+      # Major version bumps for everything else are rarely a drop-in
+      # replacement (new ESM-only releases, flat-config migrations, dropped
+      # Node support, etc.) and deserve a human reading the changelog before
+      # a PR even opens, rather than autogenerating one that will just sit
+      # red. Dependabot security updates for majors still get through
+      # separately regardless of this ignore rule.
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: monthly
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 5
     labels:
       - dependencies
+      - github-actions
     commit-message:
       prefix: ci
+      include: scope
+    groups:
+      # GitHub-maintained actions (actions/*) change in lockstep often and
+      # are low-risk to batch; third-party actions are grouped separately
+      # so a breaking one doesn't block the trusted ones.
+      github-actions-official:
+        patterns:
+          - "actions/*"
+      github-actions-third-party:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "actions/*"
