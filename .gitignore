@@ -2,5 +2,10 @@ node_modules
 out
 dist
 gist
-*.
+*.log
 .DS_Store
+.tsbuildinfo
+coverage
+.env
+.env.*
+!.env.example

@@ -26,10 +26,17 @@ jobs:
       - name: Use supported Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 16.20.2
+          node-version: 22.22.0
+          cache: npm
 
-      - name: Run dependency-free verification
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Run verification
         run: npm run verify
+
+      - name: Check audio scheduler budget
+        run: npm run benchmark:audio
 
   dependency-review:
     name: Dependency review
@@ -57,7 +64,7 @@ jobs:
       - name: Use supported Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 16.20.2
+          node-version: 22.22.0
           cache: npm
 
       - name: Install locked dependencies

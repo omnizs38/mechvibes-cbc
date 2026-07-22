@@ -70,6 +70,28 @@ for (const directory of fs.readdirSync(path.join(root, 'src', 'audio'), { withFi
   }
 }
 
+const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+const packageLock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.json'), 'utf8'));
+const lockRoot = packageLock.packages && packageLock.packages[''];
+if (!lockRoot || packageJson.version !== packageLock.version || packageJson.version !== lockRoot.version) {
+  failures.push('package.json and package-lock.json versions must match.');
+}
+for (const section of ['dependencies', 'devDependencies']) {
+  const declared = packageJson[section] || {};
+  const locked = (lockRoot && lockRoot[section]) || {};
+  for (const [name, range] of Object.entries(declared)) {
+    if (locked[name] !== range) {
+      failures.push(`package-lock root mismatch for ${section}.${name}.`);
+    }
+    if (!packageLock.packages[`node_modules/${name}`]) {
+      failures.push(`package-lock is missing node_modules/${name}.`);
+    }
+  }
+  for (const name of Object.keys(locked)) {
+    if (!(name in declared)) failures.push(`package-lock has undeclared root ${section}.${name}.`);
+  }
+}
+
 if (failures.length > 0) {
   console.error(failures.join('\n\n'));
   process.exit(1);

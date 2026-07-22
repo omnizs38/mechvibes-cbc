@@ -1,0 +1,8 @@
+node_modules/
+dist/
+out/
+src/audio/
+src/assets/jquery.js
+src/assets/milligram.min.css
+package-lock.json
+yarn.lock

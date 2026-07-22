@@ -2,7 +2,7 @@
 
 const path = require('path');
 
-const SUPPORTED_VERSIONS = new Set([1, 2]);
+const SUPPORTED_VERSIONS = new Set([1, 2, 3]);
 const SUPPORTED_AUDIO_EXTENSIONS = new Set([
   '.aac',
   '.flac',
@@ -102,6 +102,131 @@ function validateSpriteDefinition(value, key) {
   }
 }
 
+function validateFiniteRange(value, field, minimum, maximum, fallback) {
+  if (value === undefined && fallback !== undefined) return fallback;
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < minimum || number > maximum) {
+    throw new SoundpackValidationError(`${field} must be between ${minimum} and ${maximum}.`);
+  }
+  return number;
+}
+
+function validateV3Sample(sample, field) {
+  if (typeof sample === 'string') {
+    return { file: normalizeSoundReference(sample, field), gain: 1, pitch: 0, weight: 1 };
+  }
+  if (!isPlainObject(sample)) {
+    throw new SoundpackValidationError(`${field} must be a file path or sample object.`);
+  }
+  return {
+    ...sample,
+    file: normalizeSoundReference(sample.file, `${field}.file`),
+    gain: validateFiniteRange(sample.gain, `${field}.gain`, 0, 2, 1),
+    pitch: validateFiniteRange(sample.pitch, `${field}.pitch`, -1200, 1200, 0),
+    weight: validateFiniteRange(sample.weight, `${field}.weight`, 0.01, 100, 1),
+  };
+}
+
+function validateV3Layer(layer, field) {
+  if (!isPlainObject(layer)) {
+    throw new SoundpackValidationError(`${field} must be an object.`);
+  }
+  if (!Array.isArray(layer.samples) || layer.samples.length < 1 || layer.samples.length > 128) {
+    throw new SoundpackValidationError(`${field}.samples must contain between 1 and 128 entries.`);
+  }
+  const mode = layer.mode === undefined ? 'round-robin' : layer.mode;
+  if (mode !== 'round-robin' && mode !== 'random') {
+    throw new SoundpackValidationError(`${field}.mode must be round-robin or random.`);
+  }
+  const envelope = layer.envelope === undefined ? {} : layer.envelope;
+  if (!isPlainObject(envelope)) {
+    throw new SoundpackValidationError(`${field}.envelope must be an object.`);
+  }
+  return {
+    ...layer,
+    samples: layer.samples.map((sample, index) => validateV3Sample(sample, `${field}.samples[${index}]`)),
+    mode,
+    gain: validateFiniteRange(layer.gain, `${field}.gain`, 0, 2, 1),
+    pitchVariationCents: validateFiniteRange(layer.pitchVariationCents, `${field}.pitchVariationCents`, 0, 100, 0),
+    priority: validateFiniteRange(layer.priority, `${field}.priority`, 0, 10, 5),
+    envelope: {
+      attackMs: validateFiniteRange(envelope.attackMs, `${field}.envelope.attackMs`, 0, 100, 0),
+      releaseMs: validateFiniteRange(envelope.releaseMs, `${field}.envelope.releaseMs`, 0, 2000, 12),
+    },
+  };
+}
+
+function validateV3Config(config, name) {
+  const engine = config.engine === undefined ? {} : config.engine;
+  const defaults = config.defaults === undefined ? {} : config.defaults;
+  const keys = config.keys === undefined ? {} : config.keys;
+  if (!isPlainObject(engine) || !isPlainObject(defaults) || !isPlainObject(keys)) {
+    throw new SoundpackValidationError('v3 engine, defaults, and keys must be objects.');
+  }
+  const preload = engine.preload === undefined ? 'priority' : engine.preload;
+  if (!['all', 'priority', 'lazy'].includes(preload)) {
+    throw new SoundpackValidationError('engine.preload must be all, priority, or lazy.');
+  }
+
+  const normalizedDefaults = {};
+  for (const eventType of ['keydown', 'keyup']) {
+    if (defaults[eventType] !== undefined) {
+      normalizedDefaults[eventType] = validateV3Layer(defaults[eventType], `defaults.${eventType}`);
+    }
+  }
+
+  const normalizedKeys = {};
+  for (const [key, eventLayers] of Object.entries(keys)) {
+    if (!/^[0-9]+$/.test(key) || !isPlainObject(eventLayers)) {
+      throw new SoundpackValidationError(`keys.${key} is invalid.`);
+    }
+    const normalizedEvents = {};
+    for (const eventType of ['keydown', 'keyup']) {
+      if (eventLayers[eventType] !== undefined) {
+        normalizedEvents[eventType] = validateV3Layer(eventLayers[eventType], `keys.${key}.${eventType}`);
+      }
+    }
+    if (Object.keys(normalizedEvents).length === 0) {
+      throw new SoundpackValidationError(`keys.${key} must define keydown or keyup.`);
+    }
+    normalizedKeys[key] = normalizedEvents;
+  }
+  if (Object.keys(normalizedDefaults).length === 0 && Object.keys(normalizedKeys).length === 0) {
+    throw new SoundpackValidationError('v3 must define at least one playable event layer.');
+  }
+
+  const checksums = config.checksums === undefined ? {} : config.checksums;
+  if (!isPlainObject(checksums)) {
+    throw new SoundpackValidationError('checksums must be an object.');
+  }
+  const normalizedChecksums = {};
+  for (const [file, checksum] of Object.entries(checksums)) {
+    const normalizedFile = normalizeSoundReference(file, `checksums.${file}`);
+    if (typeof checksum !== 'string' || !/^[a-f0-9]{64}$/i.test(checksum)) {
+      throw new SoundpackValidationError(`checksums.${file} must be a SHA-256 hex digest.`);
+    }
+    normalizedChecksums[normalizedFile] = checksum.toLowerCase();
+  }
+
+  return {
+    ...config,
+    name,
+    version: 3,
+    author: config.author === undefined ? '' : requireNonEmptyString(config.author, 'author'),
+    license: config.license === undefined ? '' : requireNonEmptyString(config.license, 'license'),
+    sampleRate: config.sampleRate === undefined ? null : validateFiniteRange(config.sampleRate, 'sampleRate', 22050, 192000),
+    engine: {
+      maxVoices: Math.round(validateFiniteRange(engine.maxVoices, 'engine.maxVoices', 1, 256, 64)),
+      preload,
+      cacheBudgetMb: Math.round(validateFiniteRange(engine.cacheBudgetMb, 'engine.cacheBudgetMb', 32, 1024, 192)),
+      gain: validateFiniteRange(engine.gain, 'engine.gain', 0, 2, 1),
+    },
+    defaults: normalizedDefaults,
+    keys: normalizedKeys,
+    checksums: normalizedChecksums,
+  };
+}
+
 function validateSoundpackConfig(config) {
   if (!isPlainObject(config)) {
     throw new SoundpackValidationError('config.json must contain a JSON object.');
@@ -115,6 +240,9 @@ function validateSoundpackConfig(config) {
   const name = requireNonEmptyString(config.name, 'name');
   if (name.length > MAX_NAME_LENGTH) {
     throw new SoundpackValidationError(`name must not exceed ${MAX_NAME_LENGTH} characters.`);
+  }
+  if (version === 3) {
+    return validateV3Config(config, name);
   }
 
   if (config.key_define_type !== 'single' && config.key_define_type !== 'multi') {
@@ -184,6 +312,19 @@ function expandNumberTemplateVariants(reference) {
 function listReferencedSoundFiles(config) {
   const validated = validateSoundpackConfig(config);
   const references = new Set();
+  if (validated.version === 3) {
+    const addLayer = (layer) => {
+      if (!layer) return;
+      layer.samples.forEach((sample) => references.add(sample.file));
+    };
+    addLayer(validated.defaults.keydown);
+    addLayer(validated.defaults.keyup);
+    Object.values(validated.keys).forEach((events) => {
+      addLayer(events.keydown);
+      addLayer(events.keyup);
+    });
+    return [...references];
+  }
   if (validated.key_define_type === 'single' || validated.version === 2) {
     expandNumberTemplateVariants(validated.sound).forEach((reference) => references.add(reference));
   }

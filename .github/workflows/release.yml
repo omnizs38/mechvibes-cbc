@@ -1,0 +1,122 @@
+name: Windows release
+
+on:
+  push:
+    tags:
+      - "v2.4.0-beta.*"
+      - "v2.4.0"
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate release source
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@v4
+
+      - name: Use supported Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify tag and package version
+        run: node tools/verify-release-tag.js "${GITHUB_REF_NAME}"
+
+      - name: Run release gates
+        run: npm run verify
+
+      - name: Check audio scheduler budget
+        run: npm run benchmark:audio
+
+  build-windows-x64:
+    name: Build Windows x64 assets
+    needs: validate
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - name: Check out tagged source
+        uses: actions/checkout@v4
+
+      - name: Use supported Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Build unsigned NSIS release
+        run: npm run build:win -- --x64 --publish never
+
+      - name: Require updater assets
+        shell: pwsh
+        run: |
+          $installers = @(Get-ChildItem dist -Filter "*.exe" -File)
+          $metadata = @(Get-ChildItem dist -Filter "*.yml" -File)
+          if ($installers.Count -eq 0) { throw "No Windows installer was produced." }
+          if ($metadata.Count -eq 0) { throw "No update metadata was produced." }
+
+      - name: Generate checksums and SBOM
+        shell: pwsh
+        run: |
+          Get-ChildItem dist -File |
+            Where-Object { $_.Name -ne "SHA256SUMS.txt" } |
+            Sort-Object Name |
+            ForEach-Object {
+              $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+              "$hash  $($_.Name)"
+            } | Set-Content dist/SHA256SUMS.txt -Encoding ascii
+          npm sbom --sbom-format cyclonedx > dist/sbom.cdx.json
+          if ($LASTEXITCODE -ne 0) { throw "SBOM generation failed." }
+
+      - name: Upload gated release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64-release
+          path: |
+            dist/*.exe
+            dist/*.blockmap
+            dist/*.yml
+            dist/SHA256SUMS.txt
+            dist/sbom.cdx.json
+          if-no-files-found: error
+          retention-days: 14
+
+  publish:
+    name: Publish approved GitHub Release
+    needs: build-windows-x64
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - name: Download gated assets
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-x64-release
+          path: dist
+
+      - name: Publish stable or beta release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          args=("${GITHUB_REF_NAME}" --verify-tag --generate-notes --title "Mechvibes ${GITHUB_REF_NAME}")
+          if [[ "${GITHUB_REF_NAME}" == *-beta.* ]]; then
+            args+=(--prerelease)
+          fi
+          gh release create "${args[@]}" dist/*

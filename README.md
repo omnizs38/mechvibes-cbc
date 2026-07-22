@@ -44,6 +44,14 @@ _This repository will remain available during the transition period._
 
 # Mechvibes: A fun and practical way to bring your favorite keyboard sounds anywhere
 
+## 2.4 beta direction
+
+The 2.4 line modernizes the Electron runtime and global input hook, introduces consent-based stable and beta updates, adds an experimental low-latency Web Audio engine for soundpack v3, and preserves v1/v2 compatibility. It also adds output-device selection, safer soundpack management, dark mode, stronger release gates, and automated Windows release assets.
+
+- Soundpack v3 specification: [docs/soundpack-v3.md](docs/soundpack-v3.md)
+- Automated release process: [docs/releases.md](docs/releases.md)
+- Windows acceptance matrix: [docs/windows-critical-fixes.md](docs/windows-critical-fixes.md)
+
 > Mechvibes started as a side project I created for myself. Like many mechanical keyboard lovers, I faced challenges when using my keyboard in quiet environments - whether it was late at night or in the office. The loud, satisfying clicks might be music to my ears, but not so much for my parents or coworkers! If you’re in the same boat, Mechvibes is here for you.
 
 ![Mechvibes screenshot](https://github.com/user-attachments/assets/f0340d8a-3e47-4117-a110-ce54575fc27c)
@@ -60,13 +68,13 @@ _This repository will remain available during the transition period._
 > Mechvibes isn’t just an app, it’s a way to bring the joy of mechanical keyboards to every environment, without compromising on your surroundings.
 
 ## How to Get Started
-- Download the app from the [Releases page](https://github.com/hainguyents13/mechvibes/releases/latest)
+- Download the app from the [Releases page](https://github.com/omnizs38/mechvibes/releases/latest)
 - Run it.
 - Enjoy!
 
 ## Compile from Source
 
-Use Node.js 16.20.2 (see `.nvmrc`) and the committed npm lockfile:
+Use Node.js 22.22.0 (see `.nvmrc`) and the committed npm lockfile:
 
 ```sh
 npm ci

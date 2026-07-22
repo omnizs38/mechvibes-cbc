@@ -1,12 +1,15 @@
 'use strict';
 
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { validateSoundpackConfig } = require('./validation');
 
+const useLegacyAudio = process.env.MECHVIBES_LEGACY_AUDIO === '1';
 const CONFIG_FACTORIES = {
-  1: () => require('./config-v1'),
-  2: () => require('./config-v2'),
+  1: () => require(useLegacyAudio ? './config-v1' : './config-web-audio'),
+  2: () => require(useLegacyAudio ? './config-v2' : './config-web-audio'),
+  3: () => require('./config-v3'),
 };
 
 function listSoundpackCandidates(rootDirectory) {
@@ -49,9 +52,36 @@ function buildMetadata(candidatePath, isCustom) {
   };
 }
 
+function verifySoundpackChecksums(candidatePath, config, options = {}) {
+  if (!config.checksums || Object.keys(config.checksums).length === 0) return;
+  const fileManager = options.getFile && options.clearCache ? null : require('./file-manager');
+  const getFile = options.getFile || fileManager.GetSoundpackFile;
+  const clearCache = options.clearCache || fileManager.ClearSoundpackCache;
+  try {
+    for (const [reference, expected] of Object.entries(config.checksums)) {
+      const source = getFile(candidatePath, reference);
+      const commaIndex = source.indexOf(',');
+      if (!source.startsWith('data:') || commaIndex < 0) {
+        throw new Error(`Cannot verify checksum for ${reference}.`);
+      }
+      const actual = crypto
+        .createHash('sha256')
+        .update(Buffer.from(source.slice(commaIndex + 1), 'base64'))
+        .digest('hex');
+      if (actual !== expected) {
+        throw new Error(`Checksum mismatch for ${reference}.`);
+      }
+    }
+  } catch (error) {
+    clearCache(candidatePath);
+    throw error;
+  }
+}
+
 function loadSoundpackCandidate(candidatePath, isCustom, factories = CONFIG_FACTORIES) {
   const metadata = buildMetadata(candidatePath, isCustom);
   const config = validateSoundpackConfig(readSoundpackConfig(candidatePath));
+  verifySoundpackChecksums(candidatePath, config);
   const createConfig = factories[config.version];
   if (typeof createConfig !== 'function') {
     throw new Error(`Unsupported soundpack config version: ${config.version}.`);
@@ -96,4 +126,5 @@ module.exports = {
   listSoundpackCandidates,
   loadSoundpackCandidate,
   readSoundpackConfig,
+  verifySoundpackChecksums,
 };

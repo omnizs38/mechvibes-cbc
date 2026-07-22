@@ -1,5 +1,7 @@
 // Modules to control application life and create native browser window
-const { app, BrowserWindow, Tray, Menu, shell, ipcMain } = require('electron');
+const { app, BrowserWindow, Tray, Menu, shell, ipcMain, dialog } = require('electron');
+const remoteMain = require('@electron/remote/main');
+remoteMain.initialize();
 const { getVolume, getMute } = require('easy-volume');
 const path = require('path');
 const os = require("os");
@@ -8,10 +10,12 @@ const fs = require('fs-extra');
 const log = require("electron-log");
 const Store = require("electron-store");
 const store = new Store();
-const iohook = require('iohook');
+const iohook = require('uiohook-napi').uIOhook;
 
 const StartupHandler = require('./utils/startup_handler');
 const StoreToggle = require('./utils/store_toggle');
+const { HotkeyTracker } = require('./services/hotkey-tracker');
+const { UpdateService } = require('./services/update-service');
 
 const SYSTRAY_ICON = path.join(__dirname, '/assets/system-tray-icon.png');
 const user_dir = app.getPath("userData");
@@ -172,6 +176,7 @@ log.hooks.push((msg, {transportName}) => {
 // be closed automatically when the JavaScript object is garbage collected.
 var win = null;
 var tray = null;
+var updateService = null;
 global.app_version = app.getVersion();
 global.custom_dir = custom_dir;
 global.current_pack_store_id = current_pack_store_id;
@@ -193,10 +198,10 @@ function createWindow(show = false) {
       preload: path.join(__dirname, 'app.js'),
       contextIsolation: false,
       nodeIntegration: true,
-      enableRemoteModule: true,
     },
     show: false,
   });
+  remoteMain.enable(win.webContents);
 
   // remove menu bar
   win.removeMenu();
@@ -268,6 +273,7 @@ function openInstallWindow(packId){
     show: false,
     parent: win,
   });
+  remoteMain.enable(installer.webContents);
 
   // remove menu bar
   installer.removeMenu();
@@ -314,6 +320,7 @@ function createDebugWindow(){
     show: false,
     parent: win,
   });
+  remoteMain.enable(debugWindow.webContents);
 
   // remove menu bar
   debugWindow.removeMenu();
@@ -341,6 +348,29 @@ function createDebugWindow(){
     // when you should delete the corresponding element.
     debugWindow = null;
   });
+}
+
+function validateSoundpackCandidate(candidatePath) {
+  const { readSoundpackConfig, verifySoundpackChecksums } = require('./libs/soundpacks/registry');
+  const { listReferencedSoundFiles, validateSoundpackConfig } = require('./libs/soundpacks/validation');
+  const { ClearSoundpackCache, GetSoundpackFile } = require('./libs/soundpacks/file-manager');
+  const config = validateSoundpackConfig(readSoundpackConfig(candidatePath));
+  try {
+    listReferencedSoundFiles(config).forEach((reference) => GetSoundpackFile(candidatePath, reference));
+    verifySoundpackChecksums(candidatePath, config);
+  } finally {
+    ClearSoundpackCache(candidatePath);
+  }
+  return config;
+}
+
+function customPackPath(packId) {
+  if (typeof packId !== 'string' || !packId.startsWith('custom-')) return null;
+  const folderName = packId.slice('custom-'.length);
+  if (!folderName || path.basename(folderName) !== folderName) return null;
+  const candidate = path.resolve(custom_dir, folderName);
+  const root = path.resolve(custom_dir);
+  return candidate.startsWith(`${root}${path.sep}`) ? candidate : null;
 }
 
 const gotTheLock = app.requestSingleInstanceLock();
@@ -425,6 +455,16 @@ if (!gotTheLock) {
       }
     };
 
+    const { autoUpdater } = require('electron-updater');
+    updateService = new UpdateService({
+      autoUpdater,
+      app,
+      log,
+      send: sendToMainWindow,
+      store,
+    });
+    updateService.start();
+
     let input_hook_running = false;
     const setInputHookEnabled = (enabled) => {
       try {
@@ -454,7 +494,10 @@ if (!gotTheLock) {
         sendToMainWindow('system-volume-update', volume);
       }
       sendToMainWindow('system-mute-status', system_mute);
-      setInputHookEnabled(!mute.is_enabled);
+      if (updateService) {
+        sendToMainWindow('updater-state', updateService.getState());
+      }
+      setInputHookEnabled(true);
     });
 
     const pollSystemAudio = async () => {
@@ -490,12 +533,21 @@ if (!gotTheLock) {
     pollSystemAudio();
     const sys_check_interval = setInterval(pollSystemAudio, 3000);
 
+    const hotkeys = new HotkeyTracker({
+      onMuteToggle: () => {
+        mute.toggle();
+        sendToMainWindow('mechvibes-mute-status', mute.is_enabled);
+      },
+    });
+
     iohook.on('keydown', (event) => {
-      sendToMainWindow('keydown', event);
+      if (hotkeys.handleKeydown(event)) return;
+      sendToMainWindow('keydown', { ...event, capturedAtMs: Date.now() });
     });
 
     iohook.on('keyup', (event) => {
-      sendToMainWindow('keyup', event);
+      hotkeys.handleKeyup(event);
+      sendToMainWindow('keyup', { ...event, capturedAtMs: Date.now() });
     });
 
     function createTrayIcon(){
@@ -558,7 +610,6 @@ if (!gotTheLock) {
           checked: mute.is_enabled,
           click: function () {
             mute.toggle();
-            setInputHookEnabled(!mute.is_enabled);
             sendToMainWindow('mechvibes-mute-status', mute.is_enabled);
           },
         },
@@ -636,6 +687,89 @@ if (!gotTheLock) {
         tray.destroy();
         tray = null;
       }
+    });
+
+    const isMainWindowEvent = (event) => Boolean(win && !win.isDestroyed() && event.sender === win.webContents);
+
+    ipcMain.on('updater-get-state', (event) => {
+      event.returnValue = isMainWindowEvent(event) && updateService ? updateService.getState() : null;
+    });
+    ipcMain.on('updater-check', (event) => {
+      if (isMainWindowEvent(event) && updateService) updateService.check().catch(() => {});
+    });
+    ipcMain.on('updater-download', (event) => {
+      if (isMainWindowEvent(event) && updateService) updateService.download().catch(() => {});
+    });
+    ipcMain.on('updater-install', (event) => {
+      if (isMainWindowEvent(event) && updateService) {
+        app.isQuiting = true;
+        updateService.install();
+      }
+    });
+    ipcMain.on('updater-set-channel', (event, channel) => {
+      if (!isMainWindowEvent(event) || !updateService) return;
+      try {
+        updateService.applyChannel(channel);
+        updateService.check().catch(() => {});
+      } catch (error) {
+        log.warn(`Rejected update channel: ${error.message}`);
+      }
+    });
+
+    ipcMain.handle('soundpack-open-folder', async (event) => {
+      if (!isMainWindowEvent(event)) return { ok: false, error: 'Invalid window.' };
+      const error = await shell.openPath(custom_dir);
+      return error ? { ok: false, error } : { ok: true };
+    });
+    ipcMain.handle('soundpack-refresh', async (event) => {
+      if (!isMainWindowEvent(event)) return { ok: false, error: 'Invalid window.' };
+      return { ok: true };
+    });
+    ipcMain.handle('soundpack-import', async (event) => {
+      if (!isMainWindowEvent(event)) return { ok: false, error: 'Invalid window.' };
+      const result = await dialog.showOpenDialog(win, {
+        title: 'Import Mechvibes soundpack',
+        properties: ['openFile'],
+        filters: [{ name: 'Mechvibes ZIP soundpacks', extensions: ['zip'] }],
+      });
+      if (result.canceled || result.filePaths.length === 0) return { ok: false, canceled: true };
+      const source = result.filePaths[0];
+      const fileName = path.basename(source);
+      const target = path.join(custom_dir, fileName);
+      const temporary = `${target}.import-${Date.now()}.zip`;
+      if (fs.existsSync(target)) return { ok: false, error: 'A soundpack with this filename already exists.' };
+      try {
+        fs.copyFileSync(source, temporary, fs.constants.COPYFILE_EXCL);
+        const config = validateSoundpackCandidate(temporary);
+        fs.moveSync(temporary, target, { overwrite: false });
+        store.set(current_pack_store_id, `custom-${fileName}`);
+        return { ok: true, name: config.name, packId: `custom-${fileName}` };
+      } catch (error) {
+        fs.removeSync(temporary);
+        return { ok: false, error: error.message };
+      }
+    });
+    ipcMain.handle('soundpack-delete', async (event, packId) => {
+      if (!isMainWindowEvent(event)) return { ok: false, error: 'Invalid window.' };
+      const target = customPackPath(packId);
+      if (!target || !fs.existsSync(target)) return { ok: false, error: 'Only installed custom soundpacks can be deleted.' };
+      const response = await dialog.showMessageBox(win, {
+        type: 'warning',
+        buttons: ['Delete', 'Cancel'],
+        defaultId: 1,
+        cancelId: 1,
+        title: 'Delete soundpack',
+        message: `Delete ${path.basename(target)} permanently?`,
+      });
+      if (response.response !== 0) return { ok: false, canceled: true };
+      fs.removeSync(target);
+      if (store.get(current_pack_store_id) === packId) store.delete(current_pack_store_id);
+      return { ok: true };
+    });
+
+    ipcMain.on('pack-changed', (event, pack) => {
+      if (!isMainWindowEvent(event) || !pack || typeof pack.name !== 'string') return;
+      if (tray) tray.setToolTip(`Mechvibes — ${pack.name.slice(0, 120)}`);
     });
 
     ipcMain.on('electron-log', (event, message, level) => {
@@ -780,6 +914,7 @@ app.on('activate', function () {
 // ensure app gets unregistered
 function OnBeforeQuit(){
   log.silly("Shutting down...");
+  if (updateService) updateService.stop();
   app.removeAsDefaultProtocolClient("mechvibes");
 }
 app.on("before-quit", OnBeforeQuit);
@@ -807,8 +942,10 @@ function openEditorWindow() {
     webPreferences: {
       // preload: path.join(__dirname, 'editor.js'),
       nodeIntegration: true,
+      contextIsolation: false,
     },
   });
+  remoteMain.enable(editor_window.webContents);
 
   // editor_window.openDevTools();
 

@@ -1,13 +1,20 @@
 'use strict';
 
 const assert = require('assert').strict;
+const { EventEmitter } = require('events');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { LatencyTracker } = require('../src/audio-engine/latency-tracker');
+const { createAudioManifest } = require('../src/audio-engine/manifest-adapter');
+const { SampleCache } = require('../src/audio-engine/sample-cache');
+const { SampleSelector } = require('../src/audio-engine/sample-selector');
+const { VoicePool } = require('../src/audio-engine/voice-pool');
+const { WebAudioEngine, centsToPlaybackRate } = require('../src/audio-engine/web-audio-engine');
 const { loadHowls, loadSharedHowls, withTimeout } = require('../src/libs/soundpacks/audio-loader');
 const { SoundpackManager } = require('../src/libs/soundpacks/pack-manager');
 const { resolveSoundReference } = require('../src/libs/soundpacks/reference-resolver');
-const { discoverSoundpacks } = require('../src/libs/soundpacks/registry');
+const { discoverSoundpacks, verifySoundpackChecksums } = require('../src/libs/soundpacks/registry');
 const {
   expandNumberTemplate,
   expandNumberTemplateVariants,
@@ -23,6 +30,8 @@ const {
 } = require('../src/utils/installer');
 const { chooseRandomPackIndex } = require('../src/utils/random-pack');
 const { calculateAdjustedDisplay, calculateGain } = require('../src/utils/volume');
+const { HotkeyTracker } = require('../src/services/hotkey-tracker');
+const { UpdateService, normalizeReleaseNotes } = require('../src/services/update-service');
 const { runRendererSmoke } = require('./renderer-smoke');
 
 const tests = [];
@@ -37,6 +46,32 @@ function validV1(overrides = {}) {
     includes_numpad: false,
     sound: 'sound.ogg',
     defines: { 1: [0, 100] },
+    ...overrides,
+  };
+}
+
+function validV3(overrides = {}) {
+  return {
+    name: 'Modern pack',
+    version: 3,
+    author: 'Test Author',
+    license: 'CC0-1.0',
+    sampleRate: 48000,
+    engine: { maxVoices: 64, preload: 'priority', cacheBudgetMb: 128, gain: 1 },
+    defaults: {
+      keydown: {
+        samples: ['press/a.wav', 'press/b.wav'],
+        mode: 'round-robin',
+        gain: 1,
+        pitchVariationCents: 8,
+        envelope: { attackMs: 0, releaseMs: 12 },
+      },
+      keyup: {
+        samples: ['release/a.flac'],
+      },
+    },
+    keys: {},
+    checksums: {},
     ...overrides,
   };
 }
@@ -71,6 +106,30 @@ class FakePack {
   UnloadSounds() {
     this.unloadCalls += 1;
     delete this.audio;
+  }
+}
+
+class FakeUpdater extends EventEmitter {
+  constructor() {
+    super();
+    this.checkCalls = 0;
+    this.downloadCalls = 0;
+    this.installCalls = 0;
+  }
+
+  async checkForUpdates() {
+    this.checkCalls += 1;
+    return { updateInfo: null };
+  }
+
+  async downloadUpdate() {
+    this.downloadCalls += 1;
+    return ['installer.exe'];
+  }
+
+  quitAndInstall(isSilent, forceRunAfter) {
+    this.installCalls += 1;
+    this.installArguments = [isSilent, forceRunAfter];
   }
 }
 
@@ -119,6 +178,52 @@ test('validates bundled v1 and v2 shapes', () => {
     defines: { 1: 'press/key_1.mp3', '1-up': 'release/key.mp3' },
   });
   assert.equal(v2.version, 2);
+  const metadata = { pack_id: 'default-test', abs_path: '/pack' };
+  const getFile = (_packPath, file) => `file:///pack/${file}`;
+  const v1Manifest = createAudioManifest(validateSoundpackConfig(validV1()), metadata, { getFile });
+  assert.equal(v1Manifest.events['keydown:1'].samples[0].durationSeconds, 0.1);
+  const v2Manifest = createAudioManifest(v2, metadata, { getFile });
+  assert.equal(v2Manifest.events['keydown:1'].samples.length, 1);
+  assert.equal(v2Manifest.events['keyup:1'].samples.length, 1);
+});
+
+test('validates v3 layers and adapts them to the unified audio manifest', () => {
+  const config = validateSoundpackConfig(validV3());
+  assert.equal(config.version, 3);
+  assert.equal(config.engine.maxVoices, 64);
+  assert.equal(config.defaults.keydown.samples.length, 2);
+  const manifest = createAudioManifest(config, {
+    pack_id: 'custom-modern',
+    abs_path: '/packs/modern',
+  }, {
+    getFile: (_packPath, file) => `data:audio/mock,${file}`,
+  });
+  assert.equal(manifest.version, 3);
+  assert.equal(manifest.events['keydown:30'].samples.length, 2);
+  assert.equal(manifest.events['keyup:30'].samples[0].file, 'release/a.flac');
+  assert.throws(() => validateSoundpackConfig(validV3({
+    defaults: { keydown: { samples: ['unsafe/../sound.wav'] } },
+  })), /unsafe/);
+});
+
+test('verifies optional v3 SHA-256 sample integrity', () => {
+  const config = {
+    checksums: {
+      'press/a.wav': '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',
+    },
+  };
+  verifySoundpackChecksums('/pack', config, {
+    getFile: () => 'data:audio/wav;base64,aGVsbG8=',
+    clearCache() {},
+  });
+  let cleared = false;
+  assert.throws(() => verifySoundpackChecksums('/pack', {
+    checksums: { 'press/a.wav': '0'.repeat(64) },
+  }, {
+    getFile: () => 'data:audio/wav;base64,aGVsbG8=',
+    clearCache: () => { cleared = true; },
+  }), /Checksum mismatch/);
+  assert.equal(cleared, true);
 });
 
 test('rejects unsafe or malformed soundpack configuration', () => {
@@ -192,6 +297,30 @@ test('chooses a different random pack without recursion', () => {
   assert.equal(chooseRandomPackIndex([packs[0]], 'a', () => 0), null);
   assert.equal(chooseRandomPackIndex(packs, 'a', () => 0), 1);
   assert.equal(chooseRandomPackIndex(packs, 'a', () => 0.9999), 2);
+});
+
+test('selects v3 samples without immediate repeats', () => {
+  const selector = new SampleSelector(() => 0);
+  const samples = ['a', 'b', 'c'];
+  assert.equal(selector.choose('keydown:30', samples, 'round-robin'), 'a');
+  assert.equal(selector.choose('keydown:30', samples, 'round-robin'), 'b');
+  assert.equal(selector.choose('keydown:30', samples, 'random'), 'a');
+  assert.notEqual(selector.choose('keydown:30', samples, 'random'), 'a');
+});
+
+test('enforces the voice budget by stealing the oldest low-priority voice', () => {
+  const stopped = [];
+  const makeSource = (name) => ({ stop: () => stopped.push(name), onended: null });
+  const pool = new VoicePool(2);
+  const high = makeSource('high');
+  const oldestLow = makeSource('old-low');
+  const newest = makeSource('new');
+  pool.reserve({ source: oldestLow, priority: 1, startedAt: 1 });
+  pool.reserve({ source: high, priority: 8, startedAt: 2 });
+  pool.reserve({ source: newest, priority: 5, startedAt: 3 });
+  assert.deepEqual(stopped, ['old-low']);
+  assert.equal(pool.size, 2);
+  assert.equal(pool.getStats().stolenVoices, 1);
 });
 
 test('keeps the previous soundpack when a new selection fails', async () => {
@@ -301,6 +430,143 @@ test('shares one Howl instance across keys with the same source', async () => {
   assert.equal(created, 2);
   assert.equal(audioByKey['keycode-1'], audioByKey['keycode-2']);
   assert.notEqual(audioByKey['keycode-1'], audioByKey['keycode-3']);
+});
+
+test('deduplicates decoded audio and evicts least-recently-used samples', async () => {
+  let fetchCalls = 0;
+  let clock = 0;
+  const cache = new SampleCache({
+    context: {
+      async decodeAudioData() {
+        return { length: 4, numberOfChannels: 1, duration: 0.1 };
+      },
+    },
+    readSourceImpl: async () => null,
+    fetchImpl: async () => {
+      fetchCalls += 1;
+      return {
+        ok: true,
+        headers: { get: () => null },
+        arrayBuffer: async () => new ArrayBuffer(4),
+      };
+    },
+    budgetBytes: 32,
+    now: () => ++clock,
+  });
+  await cache.load('a.wav');
+  await cache.load('a.wav');
+  await cache.load('b.wav');
+  cache.get('a.wav');
+  await cache.load('c.wav');
+  assert.equal(fetchCalls, 3);
+  assert.equal(cache.has('a.wav'), true);
+  assert.equal(cache.has('b.wav'), false);
+  assert.equal(cache.has('c.wav'), true);
+});
+
+test('loads local file URLs without browser fetch', async () => {
+  let readCalls = 0;
+  const cache = new SampleCache({
+    context: {
+      async decodeAudioData() {
+        return { length: 2, numberOfChannels: 1, duration: 0.05 };
+      },
+    },
+    fetchImpl: async () => { throw new Error('fetch should not run'); },
+    readSourceImpl: async () => {
+      readCalls += 1;
+      return Buffer.from([1, 2, 3, 4]);
+    },
+  });
+  await cache.load('file:///C:/packs/key.wav');
+  assert.equal(readCalls, 1);
+});
+
+test('tracks bounded input latency percentiles', () => {
+  const tracker = new LatencyTracker(4);
+  [1, 2, 3, 4, 100].forEach((value) => tracker.record(value));
+  const stats = tracker.getStats();
+  assert.equal(stats.samples, 4);
+  assert.equal(stats.totalSamples, 5);
+  assert.equal(stats.p50Ms, 3);
+  assert.equal(stats.p95Ms, 100);
+  assert.equal(stats.maxMs, 100);
+});
+
+test('converts pitch cents to playback rate', () => {
+  assert.equal(centsToPlaybackRate(0), 1);
+  assert.equal(centsToPlaybackRate(1200), 2);
+  assert.equal(centsToPlaybackRate(-1200), 0.5);
+});
+
+test('schedules a buffered v3 sound through one Web Audio graph', async () => {
+  const starts = [];
+  const parameter = () => ({
+    value: 0,
+    cancelScheduledValues() {},
+    setValueAtTime() {},
+    linearRampToValueAtTime() {},
+  });
+  const node = () => ({ connect() {}, disconnect() {} });
+  const context = {
+    currentTime: 1,
+    state: 'running',
+    destination: {},
+    createGain: () => ({ ...node(), gain: parameter() }),
+    createDynamicsCompressor: () => ({
+      ...node(),
+      threshold: parameter(),
+      knee: parameter(),
+      ratio: parameter(),
+      attack: parameter(),
+      release: parameter(),
+    }),
+    createBufferSource: () => ({
+      ...node(),
+      playbackRate: { value: 1 },
+      stop() {},
+      start: (...arguments_) => starts.push(arguments_),
+      onended: null,
+    }),
+    async decodeAudioData() {
+      return { length: 4800, numberOfChannels: 1, duration: 0.1 };
+    },
+    async resume() {},
+    async close() { this.state = 'closed'; },
+  };
+  const engine = new WebAudioEngine({
+    contextFactory: () => context,
+    readSourceImpl: async () => null,
+    fetchImpl: async () => ({
+      ok: true,
+      headers: { get: () => null },
+      arrayBuffer: async () => new ArrayBuffer(4),
+    }),
+    random: () => 0.5,
+    now: () => 1,
+  });
+  await engine.loadManifest({
+    id: 'test',
+    name: 'Test',
+    maxVoices: 64,
+    cacheBudgetBytes: 1024 * 1024,
+    preload: 'all',
+    gain: 1,
+    events: {
+      'keydown:30': {
+        samples: [{ source: 'a.wav', gain: 1, pitch: 0 }],
+        mode: 'round-robin',
+        gain: 1,
+        pitchVariationCents: 0,
+        priority: 5,
+        envelope: { attackMs: 0, releaseMs: 10 },
+      },
+    },
+  });
+  assert.equal(await engine.play({ type: 'keydown', keycode: 30 }), true);
+  assert.equal(starts.length, 1);
+  assert.equal(engine.getStats().voices.activeVoices, 1);
+  await engine.dispose();
 });
 
 test('applies a timeout to stalled audio loading', async () => {
@@ -422,6 +688,69 @@ test('stops streamed downloads when the byte limit is exceeded', async () => {
   assert.equal(oversized.wasCancelled(), true);
 });
 
+test('latches Ctrl+Shift+M so mute toggles once per key press', () => {
+  let toggles = 0;
+  const hotkeys = new HotkeyTracker({ onMuteToggle: () => { toggles += 1; } });
+  hotkeys.handleKeydown({ keycode: 29 });
+  hotkeys.handleKeydown({ keycode: 42 });
+  assert.equal(hotkeys.handleKeydown({ keycode: 50 }), true);
+  assert.equal(hotkeys.handleKeydown({ keycode: 50 }), false);
+  assert.equal(toggles, 1);
+  hotkeys.handleKeyup({ keycode: 50 });
+  assert.equal(hotkeys.handleKeydown({ keycode: 50 }), true);
+  assert.equal(toggles, 2);
+});
+
+test('normalizes updater release notes', () => {
+  assert.equal(normalizeReleaseNotes('One change'), 'One change');
+  assert.equal(normalizeReleaseNotes([{ note: 'First' }, { note: 'Second' }]), 'First\n\nSecond');
+  assert.equal(normalizeReleaseNotes(null), '');
+});
+
+test('requires consent before downloading and installing updates', async () => {
+  const updater = new FakeUpdater();
+  const values = new Map();
+  const states = [];
+  const service = new UpdateService({
+    autoUpdater: updater,
+    app: { isPackaged: true, getVersion: () => '2.4.0-beta.1' },
+    log: { warn() {} },
+    send: (_channel, state) => states.push(state),
+    store: {
+      get: (key) => values.get(key),
+      set: (key, value) => values.set(key, value),
+    },
+    timers: {
+      setTimeout: () => 1,
+      setInterval: () => 2,
+      clearTimeout() {},
+      clearInterval() {},
+    },
+  });
+
+  service.start();
+  assert.equal(updater.autoDownload, false);
+  assert.equal(updater.autoInstallOnAppQuit, false);
+  assert.equal(service.getState().channel, 'beta');
+  assert.equal(updater.downloadCalls, 0);
+
+  updater.emit('update-available', { version: '2.4.0-beta.2', releaseNotes: 'Faster audio' });
+  assert.equal(service.getState().status, 'available');
+  assert.equal(updater.downloadCalls, 0);
+  await service.download();
+  assert.equal(updater.downloadCalls, 1);
+  updater.emit('update-downloaded', { version: '2.4.0-beta.2' });
+  service.install();
+  assert.equal(updater.installCalls, 1);
+  assert.deepEqual(updater.installArguments, [false, true]);
+
+  service.applyChannel('stable');
+  assert.equal(values.get('mechvibes-update-channel'), 'stable');
+  assert.equal(updater.channel, 'latest');
+  assert.equal(states.at(-1).channel, 'stable');
+  service.stop();
+});
+
 test('keeps critical controls keyboard-accessible', () => {
   const root = path.resolve(__dirname, '..');
   const html = fs.readFileSync(path.join(root, 'src', 'app.html'), 'utf8');
@@ -429,6 +758,8 @@ test('keeps critical controls keyboard-accessible', () => {
   assert.match(html, /<button[^>]+id="random-button"/);
   assert.match(html, /<label for="volume">/);
   assert.match(html, /<label for="tray_icon_toggle">/);
+  assert.match(html, /<label for="output-device">/);
+  assert.match(html, /id="check-updates-button"/);
   assert.match(html, /id="app-status"[^>]+aria-live="polite"/);
   assert.match(css, /:focus-visible/);
   assert.doesNotMatch(css, /\.checkbox:focus\s*\{\s*outline:\s*none/);

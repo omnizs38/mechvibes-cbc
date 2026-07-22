@@ -38,6 +38,13 @@
                   <a href="https://mechvibes.com/sound-packs/" class="open-in-browser">More sounds...</a>
                 </small>
               </div>
+              <div class="soundpack-actions" aria-label="Soundpack manager">
+                <button type="button" id="refresh-packs-button" class="link-button">Refresh</button>
+                <button type="button" id="import-pack-button" class="link-button">Import ZIP</button>
+                <button type="button" id="open-packs-button" class="link-button">Open folder</button>
+                <button type="button" id="delete-pack-button" class="link-button danger-link">Delete selected</button>
+              </div>
+              <small id="soundpack-manager-status" role="status" aria-live="polite"></small>
             </td>
           </tr>
           <tr>
@@ -57,6 +64,18 @@
               </div>
             </td>
           </tr>
+          <tr>
+            <td colspan="2">
+              <label for="output-device">Audio output</label>
+              <div class="output-device-row">
+                <select id="output-device" class="custom-input mb-0">
+                  <option value="">System default</option>
+                </select>
+                <button type="button" id="choose-output-button" class="link-button">Choose</button>
+              </div>
+              <small id="output-device-status" role="status" aria-live="polite"></small>
+            </td>
+          </tr>
           <tr class="checkbox-group">
             <td style="width: 50%"><label for="tray_icon_toggle">Show Tray Icon</label></td>
             <td style="width: 50%">
@@ -65,8 +84,41 @@
               </div>
             </td>
           </tr>
+          <tr class="checkbox-group">
+            <td style="width: 50%"><label for="dark_mode_toggle">Dark mode</label></td>
+            <td style="width: 50%">
+              <div style="display:grid;grid-template-columns: 1em auto;font-size: 2rem;justify-content:right;">
+                <input type="checkbox" class="checkbox mb-0" id="dark_mode_toggle" />
+              </div>
+            </td>
+          </tr>
         </tbody>
       </table>
+
+      <section class="updater-card" aria-labelledby="updates-heading">
+        <div class="updater-header">
+          <h2 id="updates-heading">Updates</h2>
+          <button type="button" id="check-updates-button" class="link-button">Check now</button>
+        </div>
+        <label for="update-channel">Channel</label>
+        <select id="update-channel" class="custom-input mb-0">
+          <option value="stable">Stable</option>
+          <option value="beta">Beta</option>
+        </select>
+        <p id="update-status" role="status" aria-live="polite">Update status is loading…</p>
+        <div id="update-details" class="hidden">
+          <p id="update-release-notes"></p>
+          <div class="update-actions">
+            <button type="button" id="download-update-button" class="button hidden">Download update</button>
+            <button type="button" id="install-update-button" class="button hidden">Restart and install</button>
+          </div>
+          <div id="update-progress" class="progress hidden" role="progressbar" aria-label="Update download progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div id="update-progress-bar" class="progress-bar"></div>
+          </div>
+        </div>
+        <p id="unsigned-update-warning" class="update-warning">Preview releases are currently unsigned. Windows SmartScreen may show a warning.</p>
+      </section>
+
       <div class="divider"></div>
       <div style="color: #666; font-size: 12px; text-align: center">
         <p>Made with ❤ by <a href="https://github.com/hainguyents13/mechvibes/" class="open-in-browser">hainguyents13</a></p>
@@ -84,12 +136,6 @@
         </div>
         <p id="app-version" style="color: #999">-</p>
         <div style="position: relative;">
-          <div id="update-available" class="hidden alert" role="status" aria-live="polite">
-            New version of Mechvibes is available (<span id="new-version">-</span>)
-            <div style="margin-top: 5px">
-              <a href="https://mechvibes.com/download/" class="open-in-browser">Check it out</a>
-            </div>
-          </div>
           <div id="remote-in-use" class="hidden alert" role="alert" style="position: absolute;top:-66px;left:0;right:0;padding:0;">
             <button type="button" id="quick-disable-remote" class="link-button">Disable remote debugging</button>
           </div>

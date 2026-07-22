@@ -63,8 +63,10 @@ class Element {
   }
 }
 
-async function runRendererSmoke(repositoryRoot, { expectedHowlCount = 1 } = {}) {
+async function runRendererSmoke(repositoryRoot, { expectedHowlCount = 0, expectedDecodedSamples = 1 } = {}) {
   const originalLoad = Module._load;
+  const originalAudioContextDescriptor = Object.getOwnPropertyDescriptor(global, 'AudioContext');
+  const originalNavigatorDescriptor = Object.getOwnPropertyDescriptor(global, 'navigator');
   const originalGlobals = {
     document: global.document,
     fetch: global.fetch,
@@ -75,6 +77,7 @@ async function runRendererSmoke(repositoryRoot, { expectedHowlCount = 1 } = {}) 
   const values = new Map([['mechvibes-pack', 'default-cherrymx-black-abs']]);
   const ipcListeners = new Map();
   let howlCount = 0;
+  let decodedSamples = 0;
 
   class Store {
     has(key) { return values.has(key); }
@@ -108,15 +111,66 @@ async function runRendererSmoke(repositoryRoot, { expectedHowlCount = 1 } = {}) 
     },
   };
 
+  const parameter = () => ({
+    value: 0,
+    cancelScheduledValues() {},
+    setValueAtTime() {},
+    linearRampToValueAtTime() {},
+  });
+  const audioNode = () => ({ connect() {}, disconnect() {} });
+  class FakeAudioContext {
+    constructor() {
+      this.currentTime = 0;
+      this.state = 'running';
+      this.destination = {};
+      this.sinkId = '';
+    }
+    createGain() { return { ...audioNode(), gain: parameter() }; }
+    createDynamicsCompressor() {
+      return {
+        ...audioNode(),
+        threshold: parameter(),
+        knee: parameter(),
+        ratio: parameter(),
+        attack: parameter(),
+        release: parameter(),
+      };
+    }
+    createBufferSource() {
+      return { ...audioNode(), playbackRate: { value: 1 }, start() {}, stop() {}, onended: null };
+    }
+    async decodeAudioData() {
+      decodedSamples += 1;
+      return { length: 4800, numberOfChannels: 1, duration: 0.1 };
+    }
+    async resume() {}
+    async close() { this.state = 'closed'; }
+    async setSinkId(value) { this.sinkId = value; }
+  }
+
   const electron = {
     ipcRenderer: {
       on(channel, callback) { ipcListeners.set(channel, callback); },
       send() {},
+      sendSync(channel) {
+        if (channel === 'updater-get-state') {
+          return {
+            status: 'development',
+            channel: 'beta',
+            currentVersion: '2.4.0-beta.1',
+            availableVersion: null,
+            releaseNotes: '',
+            progress: null,
+            error: null,
+          };
+        }
+        return null;
+      },
     },
     remote: {
       getGlobal(name) {
         return {
-          app_version: 'v2.3.5',
+          app_version: '2.4.0-beta.1',
           current_pack_store_id: 'mechvibes-pack',
           custom_dir: customDirectory,
         }[name];
@@ -128,9 +182,14 @@ async function runRendererSmoke(repositoryRoot, { expectedHowlCount = 1 } = {}) 
   const elements = new Map();
   const ids = [
     'app-body', 'app-logo', 'app-status', 'app-version', 'debug-options-seperator',
-    'logo', 'mechvibes-muted', 'new-version', 'open-debug-options', 'pack-list',
-    'quick-disable-remote', 'random-button', 'remote-in-use', 'system-muted',
-    'tray_icon_toggle', 'tray_icon_toggle_group', 'update-available', 'volume', 'volume-value-display',
+    'check-updates-button', 'choose-output-button', 'dark_mode_toggle', 'delete-pack-button',
+    'download-update-button', 'import-pack-button', 'install-update-button', 'logo',
+    'mechvibes-muted', 'open-debug-options', 'open-packs-button',
+    'output-device', 'output-device-status', 'pack-list', 'quick-disable-remote',
+    'random-button', 'refresh-packs-button', 'remote-in-use', 'soundpack-manager-status',
+    'system-muted', 'tray_icon_toggle',
+    'tray_icon_toggle_group', 'update-channel', 'update-details', 'update-progress',
+    'update-progress-bar', 'update-release-notes', 'update-status', 'volume', 'volume-value-display',
   ];
   for (const id of ids) {
     elements.set(id, new Element(id));
@@ -142,11 +201,14 @@ async function runRendererSmoke(repositoryRoot, { expectedHowlCount = 1 } = {}) 
   let domReady = null;
   let beforeUnload = null;
   const document = {
+    documentElement: { dataset: {} },
     createElement: () => new Element(),
     getElementById: (id) => elements.get(id) || null,
     getElementsByClassName: () => [],
   };
   const window = {
+    location: { reload() {} },
+    matchMedia: () => ({ matches: false }),
     addEventListener(event, callback) {
       if (event === 'DOMContentLoaded') {
         domReady = callback;
@@ -158,6 +220,7 @@ async function runRendererSmoke(repositoryRoot, { expectedHowlCount = 1 } = {}) 
 
   Module._load = function patchedLoad(request, parent, isMain) {
     if (request === 'electron') return electron;
+    if (request === '@electron/remote') return electron.remote;
     if (request === 'electron-store') return Store;
     if (request === 'howler') return howler;
     if (request === 'glob') {
@@ -189,10 +252,25 @@ async function runRendererSmoke(repositoryRoot, { expectedHowlCount = 1 } = {}) 
   global.document = document;
   global.window = window;
   global.Howler = howler.Howler;
+  Object.defineProperty(global, 'AudioContext', {
+    configurable: true,
+    writable: true,
+    value: FakeAudioContext,
+  });
+  Object.defineProperty(global, 'navigator', {
+    configurable: true,
+    writable: true,
+    value: {
+      mediaDevices: {
+        enumerateDevices: async () => [],
+        addEventListener() {},
+      },
+    },
+  });
   global.fetch = async (url) => ({
     ok: true,
     status: 200,
-    json: async () => ({ tag_name: 'v2.3.5' }),
+    json: async () => ({ tag_name: 'v2.4.0-beta.1' }),
     text: async () => url.includes('/debug/status/') ? 'disabled' : '',
   });
 
@@ -216,16 +294,29 @@ async function runRendererSmoke(repositoryRoot, { expectedHowlCount = 1 } = {}) 
     if (expectedHowlCount !== null && howlCount !== expectedHowlCount) {
       throw new Error(`Expected ${expectedHowlCount} initial Howl instance(s); created ${howlCount}.`);
     }
+    if (expectedDecodedSamples !== null && decodedSamples !== expectedDecodedSamples) {
+      throw new Error(`Expected ${expectedDecodedSamples} decoded sample(s); decoded ${decodedSamples}.`);
+    }
     if (typeof beforeUnload === 'function') {
       beforeUnload();
     }
-    return { howlCount };
+    return { howlCount, decodedSamples };
   } finally {
     delete require.cache[require.resolve(appPath)];
     Module._load = originalLoad;
     global.document = originalGlobals.document;
     global.fetch = originalGlobals.fetch;
     global.Howler = originalGlobals.Howler;
+    if (originalAudioContextDescriptor) {
+      Object.defineProperty(global, 'AudioContext', originalAudioContextDescriptor);
+    } else {
+      delete global.AudioContext;
+    }
+    if (originalNavigatorDescriptor) {
+      Object.defineProperty(global, 'navigator', originalNavigatorDescriptor);
+    } else {
+      delete global.navigator;
+    }
     global.window = originalGlobals.window;
     fs.rmSync(customDirectory, { recursive: true, force: true });
   }

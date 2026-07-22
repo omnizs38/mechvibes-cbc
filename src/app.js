@@ -3,11 +3,15 @@
 // All of the Node.js APIs are available in the preload process.
 // It has the same sandbox as a Chrome extension.
 // const gkm = require('gkm');
+const electron = require('electron');
+electron.remote = require('@electron/remote');
 const Store = require('electron-store');
 const store = new Store();
 const { Howler } = require('howler');
-const { shell, remote, ipcRenderer } = require('electron');
+const { shell, ipcRenderer } = electron;
+const remote = electron.remote;
 const path = require('path');
+const { LatencyTracker } = require('./audio-engine/latency-tracker');
 const { SoundpackManager } = require('./libs/soundpacks/pack-manager');
 const { discoverSoundpacks } = require('./libs/soundpacks/registry');
 const { calculateAdjustedDisplay, calculateGain } = require('./utils/volume');
@@ -20,15 +24,20 @@ const MV_TRAY_LSID = 'mechvibes-hidden';
 const CUSTOM_PACKS_DIR = remote.getGlobal('custom_dir');
 const OFFICIAL_PACKS_DIR = path.join(__dirname, 'audio');
 const APP_VERSION = remote.getGlobal('app_version');
+const OUTPUT_DEVICE_LSID = 'mechvibes-output-device';
+const THEME_LSID = 'mechvibes-theme';
 
 let active_volume = true;
+let output_device_id = store.get(OUTPUT_DEVICE_LSID) || '';
 let system_volume = 50;
 let is_system_muted = false;
+let is_mechvibes_muted = false;
 let current_pack = null;
 let last_applied_gain = null;
 let pack_selection_ui_id = 0;
 const packs = [];
 const pack_manager = new SoundpackManager(packs);
+const latency_tracker = new LatencyTracker();
 
 const log = {
   silly(message){
@@ -86,6 +95,16 @@ async function selectPack(packId, { persist = true } = {}) {
     }
     current_pack = loadedPack;
     packList.value = loadedPack.pack_id;
+    ipcRenderer.send('pack-changed', { name: loadedPack.name, version: loadedPack.version });
+    const deleteButton = document.getElementById('delete-pack-button');
+    if (deleteButton) deleteButton.disabled = !loadedPack.is_custom;
+    if (output_device_id && typeof loadedPack.SetOutputDevice === 'function') {
+      try {
+        await loadedPack.SetOutputDevice(output_device_id);
+      } catch (error) {
+        log.warn(`Saved output device is unavailable: ${error.message}`);
+      }
+    }
     if (persist) {
       store.set(MV_PACK_LSID, loadedPack.pack_id);
     }
@@ -207,21 +226,37 @@ function packsToOptions(soundpacks, packList) {
 (function (window, document) {
   window.addEventListener('DOMContentLoaded', async () => {
     const version = document.getElementById('app-version');
-    const update_available = document.getElementById('update-available');
     const debug_in_use = document.getElementById('remote-in-use');
     const quick_disable_remote = document.getElementById('quick-disable-remote');
     const mechvibes_muted = document.getElementById('mechvibes-muted');
     const system_muted = document.getElementById('system-muted');
-    const new_version = document.getElementById('new-version');
     const app_logo = document.getElementById('logo');
     const app_body = document.getElementById('app-body');
     const pack_list = document.getElementById('pack-list');
     const random_button = document.getElementById('random-button');
+    const refresh_packs_button = document.getElementById('refresh-packs-button');
+    const import_pack_button = document.getElementById('import-pack-button');
+    const open_packs_button = document.getElementById('open-packs-button');
+    const delete_pack_button = document.getElementById('delete-pack-button');
+    const soundpack_manager_status = document.getElementById('soundpack-manager-status');
     const debug_button = document.getElementById('open-debug-options');
     const debug_button_seperator = document.getElementById('debug-options-seperator');
     const volume_value = document.getElementById('volume-value-display');
     const volume = document.getElementById('volume');
     const tray_icon_toggle = document.getElementById('tray_icon_toggle');
+    const dark_mode_toggle = document.getElementById('dark_mode_toggle');
+    const output_device = document.getElementById('output-device');
+    const choose_output_button = document.getElementById('choose-output-button');
+    const output_device_status = document.getElementById('output-device-status');
+    const update_channel = document.getElementById('update-channel');
+    const update_status = document.getElementById('update-status');
+    const update_details = document.getElementById('update-details');
+    const update_release_notes = document.getElementById('update-release-notes');
+    const check_updates_button = document.getElementById('check-updates-button');
+    const download_update_button = document.getElementById('download-update-button');
+    const install_update_button = document.getElementById('install-update-button');
+    const update_progress = document.getElementById('update-progress');
+    const update_progress_bar = document.getElementById('update-progress-bar');
 
     app_logo.textContent = 'Loading...';
     version.textContent = APP_VERSION;
@@ -229,6 +264,7 @@ function packsToOptions(soundpacks, packList) {
     const discovery = loadPacks();
     packsToOptions(packs, pack_list);
     random_button.disabled = packs.length < 2;
+    delete_pack_button.disabled = true;
 
     const savedPack = getSavedPack();
     if (savedPack) {
@@ -242,20 +278,131 @@ function packsToOptions(soundpacks, packList) {
       setStatus(`${discovery.errors.length} invalid soundpack${discovery.errors.length === 1 ? '' : 's'} skipped.`, 'warning');
     }
 
-    fetch('https://api.github.com/repos/hainguyents13/mechvibes/releases/latest')
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`Update check failed with HTTP ${res.status}.`);
+    const renderUpdaterState = (state) => {
+      if (!state) return;
+      update_channel.value = state.channel || 'stable';
+      check_updates_button.disabled = state.status === 'checking' || state.status === 'downloading';
+      download_update_button.classList.add('hidden');
+      install_update_button.classList.add('hidden');
+      update_progress.classList.add('hidden');
+      update_details.classList.add('hidden');
+      update_release_notes.textContent = '';
+
+      const messages = {
+        idle: 'Updates are ready to check.',
+        development: 'Automatic updates are available in installed builds.',
+        checking: 'Checking for updates…',
+        'not-available': `Mechvibes ${state.currentVersion} is up to date.`,
+        downloading: 'Downloading update…',
+        downloaded: `Mechvibes ${state.availableVersion || ''} is ready to install.`,
+        error: `Update failed: ${state.error || 'Unknown error.'}`,
+      };
+      update_status.textContent = messages[state.status] || 'Update status is unavailable.';
+
+      if (state.status === 'available') {
+        update_status.textContent = `Mechvibes ${state.availableVersion} is available. Review the changes before downloading.`;
+        update_details.classList.remove('hidden');
+        download_update_button.classList.remove('hidden');
+        update_release_notes.textContent = state.releaseNotes || 'No release notes were provided.';
+      }
+      if (state.status === 'downloading') {
+        const percent = Math.max(0, Math.min(100, Number(state.progress && state.progress.percent) || 0));
+        update_details.classList.remove('hidden');
+        update_progress.classList.remove('hidden');
+        update_progress.setAttribute('aria-valuenow', String(Math.round(percent)));
+        update_progress_bar.style.width = `${percent}%`;
+        update_status.textContent = `Downloading update… ${Math.round(percent)}%`;
+      }
+      if (state.status === 'downloaded') {
+        update_details.classList.remove('hidden');
+        install_update_button.classList.remove('hidden');
+      }
+    };
+
+    ipcRenderer.on('updater-state', (_event, state) => renderUpdaterState(state));
+    check_updates_button.addEventListener('click', () => ipcRenderer.send('updater-check'));
+    download_update_button.addEventListener('click', () => ipcRenderer.send('updater-download'));
+    install_update_button.addEventListener('click', () => ipcRenderer.send('updater-install'));
+    update_channel.addEventListener('change', () => ipcRenderer.send('updater-set-channel', update_channel.value));
+    renderUpdaterState(ipcRenderer.sendSync('updater-get-state'));
+
+    const refreshOutputDevices = async () => {
+      if (!navigator.mediaDevices || typeof navigator.mediaDevices.enumerateDevices !== 'function') {
+        output_device.disabled = true;
+        choose_output_button.disabled = true;
+        output_device_status.textContent = 'Output selection is not supported by this runtime.';
+        return;
+      }
+      const devices = (await navigator.mediaDevices.enumerateDevices())
+        .filter((device) => device.kind === 'audiooutput');
+      output_device.textContent = '';
+      const defaultOption = document.createElement('option');
+      defaultOption.value = '';
+      defaultOption.textContent = 'System default';
+      output_device.appendChild(defaultOption);
+      devices.forEach((device, index) => {
+        const option = document.createElement('option');
+        option.value = device.deviceId;
+        option.textContent = device.label || `Audio output ${index + 1}`;
+        output_device.appendChild(option);
+      });
+      const selectedExists = !output_device_id || devices.some((device) => device.deviceId === output_device_id);
+      if (!selectedExists) {
+        output_device_id = '';
+        store.set(OUTPUT_DEVICE_LSID, '');
+        output_device_status.textContent = 'Saved device disconnected; using system default.';
+        if (current_pack) {
+          Promise.resolve().then(() => applyOutputDevice('')).catch(() => {});
         }
-        return res.json();
-      })
-      .then((json) => {
-        if (json.tag_name && json.tag_name.localeCompare(APP_VERSION, undefined, { numeric: true }) === 1) {
-          new_version.textContent = json.tag_name;
-          update_available.classList.remove('hidden');
+      }
+      output_device.value = output_device_id;
+    };
+
+    const applyOutputDevice = async (deviceId) => {
+      if (!current_pack) throw new Error('No soundpack is active.');
+      if (typeof current_pack.SetOutputDevice === 'function') {
+        await current_pack.SetOutputDevice(deviceId);
+      } else if (Howler.ctx && typeof Howler.ctx.setSinkId === 'function') {
+        await Howler.ctx.setSinkId(deviceId || '');
+      } else {
+        throw new Error('Output selection is not supported by this audio engine.');
+      }
+      output_device_id = deviceId || '';
+      store.set(OUTPUT_DEVICE_LSID, output_device_id);
+      output_device.value = output_device_id;
+      output_device_status.textContent = output_device_id ? 'Selected output is active.' : 'Using system default output.';
+    };
+
+    choose_output_button.addEventListener('click', async () => {
+      try {
+        let deviceId = output_device.value;
+        if (navigator.mediaDevices && typeof navigator.mediaDevices.selectAudioOutput === 'function') {
+          const selected = await navigator.mediaDevices.selectAudioOutput(
+            output_device_id ? { deviceId: output_device_id } : undefined,
+          );
+          deviceId = selected.deviceId;
+          await refreshOutputDevices();
         }
-      })
-      .catch((error) => log.debug(error.message));
+        await applyOutputDevice(deviceId);
+      } catch (error) {
+        output_device_status.textContent = `Could not select output: ${error.message}`;
+      }
+    });
+    output_device.addEventListener('change', () => {
+      applyOutputDevice(output_device.value).catch((error) => {
+        output_device_status.textContent = `Could not select output: ${error.message}`;
+      });
+    });
+    if (navigator.mediaDevices) {
+      navigator.mediaDevices.addEventListener('devicechange', () => {
+        refreshOutputDevices().catch((error) => {
+          output_device_status.textContent = `Could not refresh outputs: ${error.message}`;
+        });
+      });
+    }
+    refreshOutputDevices().catch((error) => {
+      output_device_status.textContent = `Could not list outputs: ${error.message}`;
+    });
 
     fetch('https://beta.mechvibes.com/debug/status/', {
       method: 'GET',
@@ -285,6 +432,17 @@ function packsToOptions(soundpacks, packList) {
       store.set(MV_TRAY_LSID, tray_icon_toggle.checked);
     });
     ipcRenderer.send('show_tray_icon', tray_icon_toggle.checked);
+
+    const savedTheme = store.get(THEME_LSID);
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    dark_mode_toggle.checked = savedTheme === 'dark' || (savedTheme === undefined && prefersDark);
+    const applyTheme = () => {
+      const theme = dark_mode_toggle.checked ? 'dark' : 'light';
+      document.documentElement.dataset.theme = theme;
+      store.set(THEME_LSID, theme);
+    };
+    dark_mode_toggle.addEventListener('change', applyTheme);
+    applyTheme();
 
     const displayVolume = () => {
       const configuredVolume = Number(volume.value);
@@ -345,6 +503,7 @@ function packsToOptions(soundpacks, packList) {
 
     // warn about muted mechvibes
     ipcRenderer.on("mechvibes-mute-status", (_event, enabled) => {
+      is_mechvibes_muted = enabled;
       if(enabled){
         mechvibes_muted.classList.remove("hidden");
       }else{
@@ -359,21 +518,23 @@ function packsToOptions(soundpacks, packList) {
 
     const pressedKeys = new Set();
 
-    ipcRenderer.on('keyup', (_, { keycode }) => {
+    ipcRenderer.on('keyup', (_, inputEvent) => {
+      const { keycode, capturedAtMs } = inputEvent;
       pressedKeys.delete(keycode);
-      playSound({ type: 'keyup', keycode }, volume.value);
+      playSound({ type: 'keyup', keycode, capturedAtMs }, volume.value);
       if (pressedKeys.size === 0) {
         app_logo.classList.remove('pressed');
       }
     });
 
-    ipcRenderer.on('keydown', (_, { keycode }) => {
+    ipcRenderer.on('keydown', (_, inputEvent) => {
+      const { keycode, capturedAtMs } = inputEvent;
       if (pressedKeys.has(keycode)) {
         return;
       }
       pressedKeys.add(keycode);
       app_logo.classList.add('pressed');
-      playSound({ type: 'keydown', keycode }, volume.value);
+      playSound({ type: 'keydown', keycode, capturedAtMs }, volume.value);
     });
 
     random_button.addEventListener('click', () => {
@@ -382,6 +543,46 @@ function packsToOptions(soundpacks, packList) {
         return;
       }
       setPackByIndex(packIndex);
+    });
+
+    const runSoundpackAction = async (button, action, pendingMessage, refreshAfter = true) => {
+      button.disabled = true;
+      soundpack_manager_status.textContent = pendingMessage;
+      try {
+        const result = await action();
+        if (!result || !result.ok) {
+          soundpack_manager_status.textContent = result && result.canceled ? 'Action canceled.' : `Action failed: ${(result && result.error) || 'Unknown error.'}`;
+          return;
+        }
+        if (refreshAfter) {
+          soundpack_manager_status.textContent = 'Soundpack manager updated. Refreshing…';
+          window.location.reload();
+        } else {
+          soundpack_manager_status.textContent = 'Soundpack folder opened.';
+        }
+      } catch (error) {
+        soundpack_manager_status.textContent = `Action failed: ${error.message}`;
+      } finally {
+        button.disabled = false;
+      }
+    };
+
+    refresh_packs_button.addEventListener('click', () => {
+      runSoundpackAction(refresh_packs_button, () => ipcRenderer.invoke('soundpack-refresh'), 'Refreshing soundpacks…');
+    });
+    import_pack_button.addEventListener('click', () => {
+      runSoundpackAction(import_pack_button, () => ipcRenderer.invoke('soundpack-import'), 'Waiting for a ZIP soundpack…');
+    });
+    open_packs_button.addEventListener('click', () => {
+      runSoundpackAction(open_packs_button, () => ipcRenderer.invoke('soundpack-open-folder'), 'Opening soundpack folder…', false);
+    });
+    delete_pack_button.addEventListener('click', () => {
+      if (!current_pack) return;
+      runSoundpackAction(
+        delete_pack_button,
+        () => ipcRenderer.invoke('soundpack-delete', current_pack.pack_id),
+        'Waiting for deletion confirmation…',
+      );
     });
 
     debug_button.addEventListener('click', (e) => {
@@ -405,8 +606,16 @@ window.addEventListener('beforeunload', () => {
 // ==================================================
 // universal play function
 function playSound(event, volume) {
-  if (current_pack === null || current_pack.audio === undefined || is_system_muted) {
+  if (current_pack === null || current_pack.audio === undefined || is_system_muted || is_mechvibes_muted) {
     return;
+  }
+
+  if (Number.isFinite(event.capturedAtMs)) {
+    latency_tracker.record(Date.now() - event.capturedAtMs);
+    if (latency_tracker.totalSamples % 1000 === 0) {
+      const stats = latency_tracker.getStats();
+      log.debug(`Input-to-renderer latency p50=${stats.p50Ms}ms p95=${stats.p95Ms}ms p99=${stats.p99Ms}ms`);
+    }
   }
 
   const gain = calculateGain({
@@ -415,7 +624,11 @@ function playSound(event, volume) {
     activeAdjustment: active_volume,
   });
   if (gain !== last_applied_gain) {
-    Howler.masterGain.gain.setValueAtTime(gain, Howler.ctx.currentTime);
+    if (typeof current_pack.SetMasterGain === 'function') {
+      current_pack.SetMasterGain(gain);
+    } else {
+      Howler.masterGain.gain.setValueAtTime(gain, Howler.ctx.currentTime);
+    }
     last_applied_gain = gain;
   }
 

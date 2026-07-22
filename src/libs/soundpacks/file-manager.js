@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { fileURLToPath, pathToFileURL } = require('url');
 const mime = require('mime-types');
 const Zip = require('adm-zip');
 const { normalizeSoundReference } = require('./validation');
@@ -11,6 +12,7 @@ const MAX_ARCHIVE_ENTRIES = 4096;
 const MAX_CONFIG_BYTES = 1024 * 1024;
 const MAX_FILE_BYTES = 64 * 1024 * 1024;
 const fileCache = new Map();
+const archiveEntriesCache = new Map();
 
 mime.types.mp4 = 'audio/mp4';
 mime.types.wav = 'audio/wav';
@@ -44,6 +46,10 @@ function openArchive(folder) {
   if (!stat.isFile() || stat.size > MAX_ARCHIVE_BYTES) {
     throw new Error(`Soundpack archive exceeds the ${MAX_ARCHIVE_BYTES} byte limit.`);
   }
+  const cached = archiveEntriesCache.get(folder);
+  if (cached && cached.size === stat.size && cached.mtimeMs === stat.mtimeMs) {
+    return cached.entries;
+  }
   const archive = new Zip(folder);
   const entries = archive.getEntries();
   if (entries.length > MAX_ARCHIVE_ENTRIES) {
@@ -64,6 +70,7 @@ function openArchive(folder) {
       }
     }
   }
+  archiveEntriesCache.set(folder, { size: stat.size, mtimeMs: stat.mtimeMs, entries });
   return entries;
 }
 
@@ -192,7 +199,51 @@ function GetSoundpackFile(absPath, sound) {
   return value;
 }
 
+function GetSoundpackSource(absPath, sound) {
+  const safeSound = normalizeSoundReference(sound);
+  if (IsArchivePath(absPath)) {
+    const entry = findArchiveEntry(openArchive(absPath), safeSound);
+    if (!entry) throw new Error(`Soundpack audio file is missing: ${safeSound}.`);
+    const payload = Buffer.from(JSON.stringify({ archive: absPath, file: safeSound }), 'utf8').toString('base64url');
+    return `mechvibes-archive:${payload}`;
+  }
+  const filePath = resolveContainedFile(absPath, safeSound);
+  if (filePath === null) throw new Error(`Soundpack audio file is missing: ${safeSound}.`);
+  const stat = fs.statSync(filePath);
+  if (stat.size > MAX_FILE_BYTES) throw new Error(`Soundpack file exceeds the ${MAX_FILE_BYTES} byte limit.`);
+  const mimeType = mime.lookup(filePath);
+  if (!mimeType || !String(mimeType).startsWith('audio/')) {
+    throw new Error(`Unsupported audio type in "${safeSound}".`);
+  }
+  return pathToFileURL(filePath).href;
+}
+
+async function ReadSoundpackSource(source) {
+  if (String(source).startsWith('file:')) {
+    return fs.promises.readFile(fileURLToPath(source));
+  }
+  if (String(source).startsWith('mechvibes-archive:')) {
+    let descriptor;
+    try {
+      descriptor = JSON.parse(Buffer.from(String(source).slice('mechvibes-archive:'.length), 'base64url').toString('utf8'));
+    } catch (_) {
+      throw new Error('Invalid archived soundpack source.');
+    }
+    const dataUrl = GetFileFromArchive(descriptor.archive, descriptor.file);
+    if (dataUrl === null) throw new Error(`Soundpack audio file is missing: ${descriptor.file}.`);
+    const commaIndex = dataUrl.indexOf(',');
+    return Buffer.from(dataUrl.slice(commaIndex + 1), 'base64');
+  }
+  if (String(source).startsWith('data:')) {
+    const commaIndex = String(source).indexOf(',');
+    if (commaIndex < 0) throw new Error('Invalid data URL soundpack source.');
+    return Buffer.from(String(source).slice(commaIndex + 1), 'base64');
+  }
+  return null;
+}
+
 function ClearSoundpackCache(absPath) {
+  archiveEntriesCache.delete(absPath);
   for (const cacheKey of fileCache.keys()) {
     if (cacheKey.startsWith(`archive:${absPath}:`) || cacheKey.startsWith(`folder:${absPath}:`)) {
       fileCache.delete(cacheKey);
@@ -206,9 +257,11 @@ module.exports = {
   GetFileFromFolder,
   GetFilesFromArchive,
   GetSoundpackFile,
+  GetSoundpackSource,
   IsArchivePath,
   MAX_ARCHIVE_BYTES,
   MAX_ARCHIVE_ENTRIES,
   MAX_CONFIG_BYTES,
   MAX_FILE_BYTES,
+  ReadSoundpackSource,
 };

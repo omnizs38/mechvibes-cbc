@@ -2,7 +2,10 @@
 
 const fs = require('fs-extra');
 const path = require('path');
-const { remote, ipcRenderer } = require('electron');
+const electron = require('electron');
+electron.remote = require('@electron/remote');
+const { ipcRenderer } = electron;
+const remote = electron.remote;
 const { listReferencedSoundFiles, validateSoundpackConfig } = require('./libs/soundpacks/validation');
 const {
   MAX_FILE_BYTES,
