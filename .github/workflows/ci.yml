@@ -53,10 +53,31 @@ jobs:
         with:
           fail-on-severity: high
 
-  windows-build:
-    name: Windows x64 build
-    runs-on: windows-latest
+  build:
+    name: Build test on ${{ matrix.os }}
+    needs: quality
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        include:
+          - os: windows-latest
+            build-cmd: npm run build:win -- --publish never
+            artifact-name: mechvibes-windows-x64
+            artifact-path: dist/**/*.exe
+          - os: macos-latest
+            build-cmd: npm run build:mac -- --publish never
+            artifact-name: mechvibes-macos-x64
+            artifact-path: dist/**/*.dmg
+          - os: ubuntu-latest
+            build-cmd: npm run build:linux -- --publish never
+            artifact-name: mechvibes-linux-x64
+            artifact-path: |
+              dist/**/*.deb
+              dist/**/*.AppImage
+              dist/**/*.snap
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
@@ -73,13 +94,13 @@ jobs:
       - name: Run verification
         run: npm run verify
 
-      - name: Build Windows x64 installer
-        run: npm run build:win -- --publish never
+      - name: Build packages
+        run: ${{ matrix.build-cmd }}
 
-      - name: Upload Windows installer
+      - name: Upload compiled artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: mechvibes-windows-x64
-          path: dist/**/*.exe
+          name: ${{ matrix.artifact-name }}
+          path: ${{ matrix.artifact-path }}
           if-no-files-found: error
           retention-days: 14

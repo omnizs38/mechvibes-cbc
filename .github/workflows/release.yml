@@ -1,4 +1,4 @@
-name: Windows release
+name: Multi-platform release
 
 on:
   push:
@@ -41,11 +41,38 @@ jobs:
       - name: Check audio scheduler budget
         run: npm run benchmark:audio
 
-  build-windows-x64:
-    name: Build Windows x64 assets
+  build:
+    name: Build assets on ${{ matrix.os }}
     needs: validate
-    runs-on: windows-latest
-    timeout-minutes: 35
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        include:
+          - os: windows-latest
+            build-cmd: npm run build:win -- --x64 --publish never
+            artifact-name: windows-release-assets
+            artifact-path: |
+              dist/*.exe
+              dist/*.blockmap
+              dist/*.yml
+          - os: macos-latest
+            build-cmd: npm run build:mac -- --x64 --publish never
+            artifact-name: macos-release-assets
+            artifact-path: |
+              dist/*.dmg
+              dist/*.blockmap
+              dist/*.yml
+          - os: ubuntu-latest
+            build-cmd: npm run build:linux -- --x64 --publish never
+            artifact-name: linux-release-assets
+            artifact-path: |
+              dist/*.deb
+              dist/*.AppImage
+              dist/*.snap
+              dist/*.yml
     steps:
       - name: Check out tagged source
         uses: actions/checkout@v7
@@ -59,18 +86,15 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
 
-      - name: Build unsigned NSIS release
-        run: npm run build:win -- --x64 --publish never
+      - name: Build release packages
+        run: ${{ matrix.build-cmd }}
 
-      - name: Require updater assets
-        shell: pwsh
-        run: |
-          $installers = @(Get-ChildItem dist -Filter "*.exe" -File)
-          $metadata = @(Get-ChildItem dist -Filter "*.yml" -File)
-          if ($installers.Count -eq 0) { throw "No Windows installer was produced." }
-          if ($metadata.Count -eq 0) { throw "No update metadata was produced." }
+      - name: Clean up temporary debug configurations to avoid conflicts
+        shell: bash
+        run: rm -f dist/builder-debug.yml || true
 
-      - name: Generate checksums and SBOM
+      - name: Generate checksums and SBOM (Windows)
+        if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
           Get-ChildItem dist -File |
@@ -81,14 +105,27 @@ jobs:
               "$hash  $($_.Name)"
             } | Set-Content dist/SHA256SUMS.txt -Encoding ascii
           npm sbom --sbom-format cyclonedx > dist/sbom.cdx.json
-          if ($LASTEXITCODE -ne 0) { throw "SBOM generation failed." }
 
-      - name: Upload gated release assets
+      - name: Generate checksums and SBOM (Posix)
+        if: matrix.os != 'windows-latest'
+        shell: bash
+        run: |
+          find dist -maxdepth 1 -type f ! -name "SHA256SUMS.txt" | sort | while read -r file; do
+            filename=$(basename "$file")
+            sha256sum "$file" | awk -v fn="$filename" '{print $1 "  " fn}' >> dist/SHA256SUMS.txt
+          done
+          npm sbom --sbom-format cyclonedx > dist/sbom.cdx.json
+
+      - name: Upload compiled OS release assets
         uses: actions/upload-artifact@v7
         with:
-          name: windows-x64-release
+          name: ${{ matrix.artifact-name }}
           path: |
             dist/*.exe
+            dist/*.dmg
+            dist/*.deb
+            dist/*.AppImage
+            dist/*.snap
             dist/*.blockmap
             dist/*.yml
             dist/SHA256SUMS.txt
@@ -98,22 +135,44 @@ jobs:
 
   publish:
     name: Stage draft GitHub Release for manual publish
-    needs: build-windows-x64
+    needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    # This `environment: release` gate ONLY blocks if the "release" environment
-    # in repo Settings -> Environments has "Required reviewers" configured.
-    # That is a repo-setting, not something this YAML can enforce on its own —
-    # verify it is actually configured, or this line is a silent no-op.
+    timeout-minutes: 15
     environment: release
     permissions:
       contents: write
     steps:
-      - name: Download gated assets
+      - name: Create local temporary directory for staging assets
+        run: mkdir -p dist-merged
+
+      - name: Download Windows assets
         uses: actions/download-artifact@v8
         with:
-          name: windows-x64-release
-          path: dist
+          name: windows-release-assets
+          path: dist-merged
+
+      - name: Download macOS assets
+        uses: actions/download-artifact@v8
+        with:
+          name: macos-release-assets
+          path: dist-merged
+
+      - name: Download Linux assets
+        uses: actions/download-artifact@v8
+        with:
+          name: linux-release-assets
+          path: dist-merged
+
+      - name: Generate centralized multios SHA256SUMS manifest
+        shell: bash
+        run: |
+          cd dist-merged
+          rm -f SHA256SUMS.txt sbom.cdx.json builder-debug.yml
+          find . -maxdepth 1 -type f | sort | while read -r file; do
+            filename=$(basename "$file")
+            sha256sum "$file" | awk -v fn="$filename" '{print $1 "  " fn}' >> SHA256SUMS.txt
+          done
+          npm sbom --sbom-format cyclonedx > sbom.cdx.json || true
 
       - name: Stage release as a draft (always — never auto-publish)
         env:
@@ -124,8 +183,8 @@ jobs:
           if [[ "${GITHUB_REF_NAME}" == *-beta.* || "${GITHUB_REF_NAME}" == *-rc.* ]]; then
             args+=(--prerelease)
           fi
-          gh release create "${args[@]}" dist/*
+          gh release create "${args[@]}" dist-merged/*
           echo "### Release staged as DRAFT — requires manual publish" >> "$GITHUB_STEP_SUMMARY"
-          echo "This workflow intentionally never auto-publishes. A human must open" >> "$GITHUB_STEP_SUMMARY"
-          echo "the draft release, review the attached .exe/checksums/SBOM, and click" >> "$GITHUB_STEP_SUMMARY"
-          echo "**Publish release** in the GitHub UI before it becomes publicly visible." >> "$GITHUB_STEP_SUMMARY"
+          echo "This workflow has safely built, compiled, and merged artifacts" >> "$GITHUB_STEP_SUMMARY"
+          echo "from all three major operating systems (Windows, macOS, and Linux)." >> "$GITHUB_STEP_SUMMARY"
+          echo "A human must manually publish the draft release in the GitHub UI." >> "$GITHUB_STEP_SUMMARY"

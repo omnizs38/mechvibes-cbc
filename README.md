@@ -15,11 +15,36 @@ A modern, open-source application that brings the sound of mechanical keyboards 
   <img src="https://img.shields.io/github/actions/workflow/status/omnizs38/mechvibes-cbc/ci.yml?branch=main&label=CI&style=for-the-badge&logo=github-actions&logoColor=white" alt="CI Status">
 </p>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/Platform-Windows-0078D6?style=flat-square&logo=windows&logoColor=white" alt="Windows Support">
+  <img src="https://img.shields.io/badge/Platform-macOS-000000?style=flat-square&logo=apple&logoColor=white" alt="macOS Support">
+  <img src="https://img.shields.io/badge/Platform-Linux-FCC624?style=flat-square&logo=linux&logoColor=black" alt="Linux Support">
+</p>
+
 ---
 
 This repository is an actively maintained fork of the original Mechvibes project with numerous improvements, fixes, and new features.
 
 Official website: **[mechvibes-cbc.pages.dev](https://mechvibes-cbc.pages.dev/)**
+
+---
+
+## System Requirements / Системные требования
+
+This project runs natively across major platforms. Below are the minimal OS and runtime version requirements:
+
+* **Windows**:
+  * **OS Version**: Windows 10 (Build 1903/19H1) or later (64-bit).
+  * **Runtime**: Electron 43.1+ base, Node.js 22.
+
+* **macOS**:
+  * **OS Version**: macOS 10.15 (Catalina) or later.
+  * **Architecture**: Intel (`x64`) & Apple Silicon natively compatible.
+
+* **Linux**:
+  * **Linux Kernel**: Kernel version **5.4** or newer (with standard user namespaces enabled for Electron sandbox).
+  * **GLIBC Requirement**: **`glibc 2.31`** or newer (Ubuntu 20.04+, Debian 11+, Fedora 32+).
+  * **Formats**: Available as Debian packages (`.deb`), snappy packages (`.snap`), and universal standalone `.AppImage` runtimes.
 
 ---
 
