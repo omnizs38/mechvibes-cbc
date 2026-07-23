@@ -121,3 +121,25 @@ jobs:
             args+=(--prerelease)
           fi
           gh release create "${args[@]}" dist/*
+
+      - name: Mark superseded v2.4.0 release as unstable
+        # Incident response for the v2.4.0 startup crash (TypeError: Cannot read
+        # properties of undefined (reading 'name') in the electron-log IPC
+        # handler, src/main.js). v2.4.1 ships the fix, so demote v2.4.0 to a
+        # prerelease (it must not stay the "Latest" release) and replace its
+        # notes with a warning pointing at the hotfix.
+        if: github.ref_name == 'v2.4.1'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          cat > RELEASE_NOTES_240.md <<'EOF'
+          > [!CAUTION]
+          > **Unstable release — do not install.** v2.4.0 crashes on startup with
+          > `TypeError: Cannot read properties of undefined (reading 'name')` in the
+          > `electron-log` IPC handler (`src/main.js`). Install the hotfix release
+          > **[v2.4.1](https://github.com/omnizs38/mechvibes/releases/tag/v2.4.1)** instead.
+
+          **Full Changelog**: https://github.com/omnizs38/mechvibes/compare/v2.4.0-beta.2...v2.4.0
+          EOF
+          gh release edit v2.4.0 --prerelease --notes-file RELEASE_NOTES_240.md
