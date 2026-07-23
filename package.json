@@ -27,7 +27,7 @@
     "node": ">=22 <23"
   },
   "keywords": [],
-  "homepage": "https://mechvibes.com",
+  "homepage": "https://mechvibes-cbc.pages.dev/",
   "author": {
     "name": "Hai Nguyen",
     "email": "hainguyen.ts13@gmail.com"
@@ -46,7 +46,7 @@
       {
         "provider": "github",
         "owner": "omnizs38",
-        "repo": "mechvibes"
+        "repo": "mechvibes-cbc"
       }
     ],
     "nsis": {
