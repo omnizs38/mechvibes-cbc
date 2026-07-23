@@ -1,12 +1,25 @@
 # Mechvibes-cbc
 
 <p align="center">
-  <img src="https://mechvibes.com/images/icon.png" alt="Mechvibes Logo" width="128">
+  <img src="https://mechvibes.com/images/icon.png" alt="Mechvibes-cbc Logo" width="128">
 </p>
 
 A modern, open-source application that brings the sound of mechanical keyboards to any keyboard on Windows, macOS, and Linux.
 
+---
+
+<p align="center">
+  <a href="https://mechvibes-cbc.pages.dev/"><img src="https://img.shields.io/badge/Website-mechvibes--cbc.pages.dev-blueviolet?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Website"></a>
+  <a href="https://github.com/omnizs38/mechvibes-cbc/releases/latest"><img src="https://img.shields.io/github/v/release/omnizs38/mechvibes-cbc?style=for-the-badge&color=success&logo=github" alt="Latest Release"></a>
+  <img src="https://img.shields.io/github/license/omnizs38/mechvibes-cbc?style=for-the-badge&color=blue" alt="License">
+  <img src="https://img.shields.io/github/actions/workflow/status/omnizs38/mechvibes-cbc/ci.yml?branch=main&label=CI&style=for-the-badge&logo=github-actions&logoColor=white" alt="CI Status">
+</p>
+
+---
+
 This repository is an actively maintained fork of the original Mechvibes project with numerous improvements, fixes, and new features.
+
+Official website: **[mechvibes-cbc.pages.dev](https://mechvibes-cbc.pages.dev/)**
 
 ---
 
@@ -54,7 +67,7 @@ Additional documentation:
 
 Download the latest release from:
 
-https://github.com/omnizs38/mechvibes/releases/latest
+https://github.com/omnizs38/mechvibes-cbc/releases/latest
 
 Run the installer and enjoy.
 
