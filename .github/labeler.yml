@@ -1,0 +1,13 @@
+# Configuration for actions/labeler — applies labels to PRs based on changed paths.
+# Only uses labels that already exist in the repo to avoid failures.
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.md"
+          - "docs/**"
+
+enhancement:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/**"

@@ -33,7 +33,30 @@ jobs:
         run: npm ci --no-audit --no-fund
 
       - name: Verify tag and package version
+        id: verify-tag
         run: node tools/verify-release-tag.js "${GITHUB_REF_NAME}"
+
+      - name: Explain tag/version mismatch
+        if: failure() && steps.verify-tag.outcome == 'failure'
+        run: |
+          {
+            echo "### Release validation failed"
+            echo ""
+            echo "The pushed tag \`${GITHUB_REF_NAME}\` (commit \`${GITHUB_SHA}\`) does not"
+            echo "satisfy \`tools/verify-release-tag.js\`. This almost always means the tag"
+            echo "was created against a commit where \`package.json\`'s \`version\` had not"
+            echo "yet been bumped to match the tag name."
+            echo ""
+            echo "To fix: delete the bad tag, make sure the version-bump commit is on"
+            echo "\`main\` first, then re-create the tag on that commit:"
+            echo ""
+            echo '```sh'
+            echo "git tag -d ${GITHUB_REF_NAME}"
+            echo "git push origin :refs/tags/${GITHUB_REF_NAME}"
+            echo "git tag ${GITHUB_REF_NAME} <correct-commit-sha>"
+            echo "git push origin ${GITHUB_REF_NAME}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Run release gates
         run: npm run verify

@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question / discussion
+    url: https://github.com/omnizs38/mechvibes-cbc/discussions
+    about: Please ask general questions and discuss ideas here instead of filing an issue.

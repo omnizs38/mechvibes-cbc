@@ -7,27 +7,45 @@ name: Mark stale issues
 
 on:
   schedule:
-  - cron: '8 17 * * *'
+    - cron: '8 17 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: stale-${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
   stale:
-
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       issues: write
       pull-requests: write
 
     steps:
-    - uses: actions/stale@v10
-      with:
-        # This might not be required?
-        # repo-token: ${{ secrets.GITHUB_TOKEN }}
-        operations-per-run: 100 # This should be temporary.
-        exempt-issue-labels: '!stale'
-        stale-issue-message: >
+      - uses: actions/stale@v10
+        with:
+          operations-per-run: 100
+          days-before-stale: 60
+          days-before-close: 7
+          # Comma-separated label names to exempt from being marked stale
+          # (NOT a negation pattern — actions/stale takes a literal list here).
+          exempt-issue-labels: 'pinned,security,good first issue'
+          exempt-pr-labels: 'pinned,security'
+          stale-issue-message: >
             This issue has been automatically marked as stale because it has not had
             any activity in the last 60 days. It will be closed in 7 days if no further
             activity occurs. Please feel free to leave a comment if you believe the issue
             is still relevant.
-        close-issue-message: >
+          close-issue-message: >
             This issue has been automatically closed due to inactivity.
+          stale-pr-message: >
+            This pull request has been automatically marked as stale because it has not had
+            any activity in the last 60 days. It will be closed in 7 days if no further
+            activity occurs. Please feel free to leave a comment or push a new commit if it
+            is still relevant.
+          close-pr-message: >
+            This pull request has been automatically closed due to inactivity.
