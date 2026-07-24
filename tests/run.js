@@ -703,9 +703,9 @@ test('keeps critical controls keyboard-accessible', () => {
   const html = fs.readFileSync(path.join(root, 'src', 'app.html'), 'utf8');
   const css = fs.readFileSync(path.join(root, 'src', 'assets', 'app.css'), 'utf8');
   assert.match(html, /<button[^>]+id="random-button"/);
-  assert.match(html, /<label for="volume">/);
-  assert.match(html, /<label for="tray_icon_toggle">/);
-  assert.match(html, /<label for="output-device">/);
+  assert.match(html, /<label for="volume"[^>]*>/);
+  assert.match(html, /<label for="tray_icon_toggle"[^>]*>/);
+  assert.match(html, /<label for="output-device"[^>]*>/);
   assert.match(html, /id="check-updates-button"/);
   assert.match(html, /id="app-status"[^>]+aria-live="polite"/);
   assert.match(css, /:focus-visible/);
