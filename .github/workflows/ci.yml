@@ -1,19 +1,15 @@
 name: Critical fix verification
-
 on:
   pull_request:
   push:
     branches:
       - main
   workflow_dispatch:
-
 concurrency:
   group: critical-fix-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
 permissions:
   contents: read
-
 jobs:
   quality:
     name: Syntax, soundpacks, and tests
@@ -22,22 +18,17 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
-
       - name: Use supported Node.js
         uses: actions/setup-node@v7
         with:
           node-version: 22.22.0
           cache: npm
-
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
-
       - name: Run verification
         run: npm run verify
-
       - name: Check audio scheduler budget
         run: npm run benchmark:audio
-
   dependency-review:
     name: Dependency review
     if: github.event_name == 'pull_request'
@@ -47,12 +38,10 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
-
       - name: Reject newly introduced vulnerable dependencies
         uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
-
   build:
     name: Build test on ${{ matrix.os }}
     needs: quality
@@ -81,28 +70,22 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v7
-
       - name: Use supported Node.js
         uses: actions/setup-node@v7
         with:
           node-version: 22.22.0
           cache: npm
-
       - name: Install native X11 and build-essential header libraries (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libx11-dev libxtst-dev libxext-dev libx11-xcb-dev libxkbcommon-dev libxkbcommon-x11-dev libxrandr-dev libxinerama-dev libxi-dev
-
+          sudo apt-get install -y libx11-dev libxtst-dev libxext-dev libx11-xcb-dev libxkbcommon-dev libxkbcommon-x11-dev libxrandr-dev libxinerama-dev libxi-dev libxt-dev
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
-
       - name: Run verification
         run: npm run verify
-
       - name: Build packages
         run: ${{ matrix.build-cmd }}
-
       - name: Upload compiled artifacts
         uses: actions/upload-artifact@v7
         with:
