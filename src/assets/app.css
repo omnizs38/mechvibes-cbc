@@ -29,6 +29,10 @@
   --space-4: 1.6rem;
   --shadow: 0 1px 2px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(16, 24, 40, 0.1);
   --focus-ring: #1a73e8;
+
+  /* Interactive surface tints (button hover/active affordances) */
+  --hover-surface: rgba(16, 24, 40, 0.06);
+  --danger-surface: rgba(180, 35, 24, 0.1);
 }
 
 html[data-theme="dark"] {
@@ -43,6 +47,9 @@ html[data-theme="dark"] {
   --track: #475467;
   --switch-off: #475467;
   --shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+
+  --hover-surface: rgba(255, 255, 255, 0.08);
+  --danger-surface: rgba(248, 113, 113, 0.16);
 }
 
 /* ==========================================================================
@@ -161,28 +168,37 @@ select:hover,
 
 /* Links & link-styled buttons */
 a,
-a:hover,
-.link-button,
-.link-button:hover {
+.link-button {
   color: var(--accent-strong);
 }
 
-a:hover,
-.link-button:hover {
+a:hover {
   text-decoration: underline;
 }
 
 .link-button {
   appearance: none;
   background: transparent;
-  border: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font: inherit;
   letter-spacing: normal;
   line-height: inherit;
   margin: 0;
-  padding: 0;
+  padding: 0.3rem 0.7rem;
   text-transform: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+/* Give link-styled buttons a subtle "clickable" affordance without turning
+   them into fully filled buttons. Hover and focus share the same treatment so
+   keyboard users get the same cue as pointer users. */
+.link-button:not(:disabled):hover,
+.link-button:not(:disabled):focus-visible {
+  background-color: var(--hover-surface);
+  border-color: var(--border);
+  text-decoration: none;
 }
 
 .link-button:disabled {
@@ -195,33 +211,71 @@ a:hover,
   color: var(--danger);
 }
 
-/* Filled buttons (updater actions) */
+/* Destructive actions get a faint red wash on hover/focus so they read as
+   deliberate without being alarming in their resting state. */
+.danger-link:not(:disabled):hover,
+.danger-link:not(:disabled):focus-visible {
+  background-color: var(--danger-surface);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* Filled buttons (primary updater actions) */
 .button {
   align-items: center;
-  background-color: var(--input-bg);
-  border: 1px solid var(--border);
+  background-color: var(--accent-strong);
+  border: 1px solid var(--accent-strong);
   border-radius: var(--radius-sm);
-  color: var(--accent-hover);
+  color: #fff;
   cursor: pointer;
   display: inline-flex;
-  font-size: 11px;
-  font-weight: 800;
-  height: 36px;
+  font-size: 12px;
+  font-weight: 700;
+  height: 38px;
   justify-content: center;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.02em;
   outline: none;
-  padding: 0 15px;
-  text-transform: uppercase;
-  transition: border-color 0.15s ease, color 0.15s ease;
+  padding: 0 16px;
+  text-transform: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.button:hover {
+.button:not(:disabled):hover,
+.button:not(:disabled):focus-visible {
+  background-color: var(--accent);
   border-color: var(--accent);
-  color: var(--accent);
+  box-shadow: var(--shadow);
 }
 
+.button:not(:disabled):active {
+  background-color: var(--accent-strong);
+  border-color: var(--accent-strong);
+  box-shadow: none;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Secondary variant: neutral outline that shares the filled button's shape. */
 .button-secondary {
+  background-color: transparent;
+  border-color: var(--border);
   color: var(--text);
+}
+
+.button-secondary:not(:disabled):hover,
+.button-secondary:not(:disabled):focus-visible {
+  background-color: var(--hover-surface);
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+
+.button-secondary:not(:disabled):active {
+  background-color: var(--hover-surface);
+  border-color: var(--text-muted);
 }
 
 /* Focus ring shared by every interactive control */
