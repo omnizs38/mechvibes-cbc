@@ -207,6 +207,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
+          # Re-running this workflow for the same tag (e.g. after a tag was
+          # re-pushed/force-updated to fix a bad commit) must not fail just
+          # because a draft release for that tag already exists from a
+          # previous attempt — `gh release create` errors out in that case.
+          # Delete any pre-existing release for this tag first so staging
+          # stays idempotent.
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            echo "An existing release for ${GITHUB_REF_NAME} was found — removing it before re-staging."
+            gh release delete "${GITHUB_REF_NAME}" --yes --cleanup-tag=false
+          fi
+
           args=("${GITHUB_REF_NAME}" --verify-tag --generate-notes --title "Mechvibes ${GITHUB_REF_NAME}" --draft)
           if [[ "${GITHUB_REF_NAME}" == *-beta.* || "${GITHUB_REF_NAME}" == *-rc.* ]]; then
             args+=(--prerelease)
