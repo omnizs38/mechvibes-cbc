@@ -6,6 +6,7 @@ import { Footer } from './components/Footer';
 import { PreferencesCard } from './components/PreferencesCard';
 import { SoundCard } from './components/SoundCard';
 import { SoundpackCard } from './components/SoundpackCard';
+import { StatusBar } from './components/StatusBar';
 import { UpdatesCard } from './components/UpdatesCard';
 import { APP_VERSION, MV_TRAY_LSID, useMechvibes } from './useMechvibes';
 import { useOutputDevices } from './useOutputDevices';
@@ -87,7 +88,6 @@ export function App() {
           <span className="app-name">Mechvibes</span>
           <span className="app-subtitle">{subtitle}</span>
         </div>
-        <span className="version-badge">v{mechvibes.appVersion}</span>
       </header>
 
       <Banners
@@ -126,12 +126,14 @@ export function App() {
         <PreferencesCard
           trayIcon={trayIcon}
           onTrayIconChange={toggleTrayIcon}
-          darkMode={theme.isDark}
-          onDarkModeChange={theme.setDarkMode}
+          themeMode={theme.mode}
+          onThemeModeChange={theme.setMode}
         />
 
         <UpdatesCard updater={updater} />
       </main>
+
+      <StatusBar version={mechvibes.appVersion} updater={updater} />
 
       <Footer
         debugOptionsAvailable={debugOptionsAvailable}

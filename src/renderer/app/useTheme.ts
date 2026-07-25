@@ -1,27 +1,47 @@
 import { useCallback, useEffect, useState } from 'react';
 import { store } from '../shared/store';
+import {
+  applyTheme,
+  readThemeMode,
+  resolveTheme,
+  watchSystemTheme,
+  type Theme,
+  type ThemeMode,
+} from '../shared/theme';
 import { THEME_LSID } from './useMechvibes';
 
-export type Theme = 'light' | 'dark';
+export type { Theme, ThemeMode };
 
-function initialTheme(): Theme {
-  const saved = store.get(THEME_LSID);
-  if (saved === 'dark' || saved === 'light') return saved;
-  const prefersDark =
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(prefers-color-scheme: dark)').matches;
-  return prefersDark ? 'dark' : 'light';
-}
-
+/**
+ * Owns the theme for the whole application.
+ *
+ * The chosen mode is persisted, so the other windows can read it, and while it
+ * is `system` the OS setting is followed live rather than sampled once at
+ * startup.
+ */
 export function useTheme() {
-  const [theme, setTheme] = useState<Theme>(initialTheme);
+  const [mode, setMode] = useState<ThemeMode>(readThemeMode);
+  const [theme, setTheme] = useState<Theme>(() => resolveTheme(readThemeMode()));
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    store.set(THEME_LSID, theme);
-  }, [theme]);
+    const resolved = resolveTheme(mode);
+    setTheme(resolved);
+    applyTheme(resolved);
+    store.set(THEME_LSID, mode);
+  }, [mode]);
 
-  const setDarkMode = useCallback((enabled: boolean) => setTheme(enabled ? 'dark' : 'light'), []);
+  useEffect(() => {
+    if (mode !== 'system') return undefined;
+    return watchSystemTheme((next) => {
+      setTheme(next);
+      applyTheme(next);
+    });
+  }, [mode]);
 
-  return { theme, isDark: theme === 'dark', setDarkMode };
+  const setDarkMode = useCallback(
+    (enabled: boolean) => setMode(enabled ? 'dark' : 'light'),
+    [],
+  );
+
+  return { mode, theme, isDark: theme === 'dark', setMode, setDarkMode };
 }

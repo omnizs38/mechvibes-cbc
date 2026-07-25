@@ -1,31 +1,31 @@
-/* Main window layout — a single scrollable screen. */
+/* Main window layout — a single scrollable screen, kept deliberately dense. */
 
 .app {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  padding: var(--space-4) var(--space-4) var(--space-3);
-  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3) var(--space-2);
+  gap: var(--space-2);
 }
 
 .app-header {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
 }
 
 .keycap {
   position: relative;
   display: grid;
   place-items: center;
-  width: 56px;
-  height: 56px;
+  width: 44px;
+  height: 44px;
   flex: none;
-  border-radius: 14px;
+  border-radius: 12px;
   background: linear-gradient(180deg, var(--surface) 0%, var(--surface-muted) 100%);
   border: 1px solid var(--border-strong);
-  box-shadow: 0 4px 0 var(--border-strong), var(--shadow-sm);
-  font-size: 24px;
+  box-shadow: 0 3px 0 var(--border-strong), var(--shadow-sm);
+  font-size: 20px;
   transition: transform 0.06s ease, box-shadow 0.06s ease;
   user-select: none;
 }
@@ -52,12 +52,12 @@
 .app-title {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
 }
 
 .app-name {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: -0.01em;
 }
@@ -70,25 +70,43 @@
   white-space: nowrap;
 }
 
-.version-badge {
-  margin-left: auto;
-  align-self: flex-start;
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: var(--surface-muted);
-  color: var(--text-muted);
-  font-family: var(--font-mono);
-  font-size: 11px;
-}
-
+/* Cards own their internal padding; the column only controls the rhythm. */
 .app-main {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.app-main .card {
+  margin: 0;
 }
 
 .app-main.is-loading {
   opacity: 0.6;
   pointer-events: none;
+}
+
+/* Soundpack filter */
+
+.pack-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.pack-search {
+  flex: 1;
+  min-width: 0;
+}
+
+.pack-count {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 .pack-meta {
@@ -120,13 +138,92 @@
   white-space: pre-wrap;
 }
 
+/* Status bar — version, updater state and one contextual action. */
+
+.app-statusbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-muted);
+  font-size: 12px;
+}
+
+.status-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--text-muted);
+}
+
+.app-statusbar[data-state='busy'] .status-dot {
+  background: var(--accent);
+  animation: status-pulse 1.1s ease-in-out infinite;
+}
+
+.app-statusbar[data-state='ready'] .status-dot {
+  background: #2e9e5b;
+}
+
+.app-statusbar[data-state='error'] .status-dot {
+  background: var(--accent-strong);
+}
+
+@keyframes status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.status-version {
+  flex: none;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
+.status-message {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+
+.status-progress {
+  flex: none;
+  width: 72px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--border);
+  overflow: hidden;
+}
+
+.status-progress-bar {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.2s ease;
+}
+
+.btn-small {
+  padding: 3px 10px;
+  font-size: 12px;
+}
+
 .app-footer {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2) var(--space-3);
-  padding-top: var(--space-2);
-  border-top: 1px solid var(--border);
+  gap: var(--space-1) var(--space-3);
+  padding-top: var(--space-1);
   font-size: 12px;
   color: var(--text-muted);
 }

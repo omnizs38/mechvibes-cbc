@@ -1,5 +1,8 @@
-import { useMemo } from 'react';
+import { useId, useMemo, useState } from 'react';
 import type { SoundPack } from '../../shared/types';
+
+/** Below this many packs a filter box costs more space than it saves. */
+const FILTER_THRESHOLD = 8;
 
 type Props = {
   packs: SoundPack[];
@@ -30,9 +33,24 @@ export function SoundpackCard({
   onOpenFolder,
   onDelete,
 }: Props) {
+  const [query, setQuery] = useState('');
+  const filterId = useId();
+
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return packs;
+    return packs.filter(
+      (pack) =>
+        // The active pack stays in the list so the select never loses its value.
+        pack.pack_id === currentPackId ||
+        pack.name.toLowerCase().includes(needle) ||
+        (pack.group || '').toLowerCase().includes(needle),
+    );
+  }, [packs, query, currentPackId]);
+
   const groups = useMemo(() => {
     const result: Array<{ name: string; packs: SoundPack[] }> = [];
-    for (const pack of packs) {
+    for (const pack of filtered) {
       const name = pack.group || 'Default';
       let group = result.find((candidate) => candidate.name === name);
       if (!group) {
@@ -42,9 +60,11 @@ export function SoundpackCard({
       group.packs.push(pack);
     }
     return result;
-  }, [packs]);
+  }, [filtered]);
 
   const busy = pendingAction !== null;
+  const showFilter = packs.length >= FILTER_THRESHOLD;
+  const narrowed = query.trim().length > 0;
 
   return (
     <section className="card">
@@ -59,6 +79,26 @@ export function SoundpackCard({
           Surprise me
         </button>
       </div>
+
+      {showFilter ? (
+        <div className="pack-toolbar">
+          <label className="sr-only" htmlFor={filterId}>
+            Filter soundpacks
+          </label>
+          <input
+            id={filterId}
+            className="input pack-search"
+            type="search"
+            placeholder="Filter by name or group…"
+            value={query}
+            disabled={disabled}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+          <span className="pack-count">
+            {narrowed ? `${filtered.length}/${packs.length}` : packs.length}
+          </span>
+        </div>
+      ) : null}
 
       <label className="sr-only" htmlFor="pack-list">
         Active soundpack
@@ -82,17 +122,18 @@ export function SoundpackCard({
         ))}
       </select>
 
+      {narrowed && filtered.length <= 1 ? (
+        <span className="hint">Nothing matches “{query.trim()}”.</span>
+      ) : null}
+
       {currentPack ? (
         <div className="pack-meta">
           <span className="tag">{currentPack.is_custom ? 'Custom' : 'Default'}</span>
           {currentPack.version ? <span>v{currentPack.version}</span> : null}
-          <span>
-            {packs.length} pack{packs.length === 1 ? '' : 's'} available
-          </span>
         </div>
       ) : null}
 
-      <div className="btn-row" style={{ marginTop: 'var(--space-3)' }}>
+      <div className="btn-row" style={{ marginTop: 'var(--space-2)' }}>
         <button type="button" className="btn-ghost" onClick={onRefresh} disabled={busy}>
           Refresh
         </button>

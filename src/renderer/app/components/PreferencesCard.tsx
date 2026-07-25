@@ -1,15 +1,17 @@
+import type { ThemeMode } from '../../shared/theme';
+
 type Props = {
   trayIcon: boolean;
   onTrayIconChange: (enabled: boolean) => void;
-  darkMode: boolean;
-  onDarkModeChange: (enabled: boolean) => void;
+  themeMode: ThemeMode;
+  onThemeModeChange: (mode: ThemeMode) => void;
 };
 
 export function PreferencesCard({
   trayIcon,
   onTrayIconChange,
-  darkMode,
-  onDarkModeChange,
+  themeMode,
+  onThemeModeChange,
 }: Props) {
   return (
     <section className="card">
@@ -32,19 +34,23 @@ export function PreferencesCard({
         />
       </div>
 
-      <div className="switch-row">
-        <span className="switch-text">
-          <span className="switch-title">Dark mode</span>
-          <span className="switch-sub">Follows your choice on every window</span>
-        </span>
-        <input
-          className="switch"
-          type="checkbox"
-          role="switch"
-          aria-label="Dark mode"
-          checked={darkMode}
-          onChange={(event) => onDarkModeChange(event.target.checked)}
-        />
+      <div className="field">
+        <div className="field-label">
+          <label htmlFor="theme-mode">Appearance</label>
+          <span className="hint">
+            {themeMode === 'system' ? 'Following Windows' : 'Set manually'}
+          </span>
+        </div>
+        <select
+          id="theme-mode"
+          className="input"
+          value={themeMode}
+          onChange={(event) => onThemeModeChange(event.target.value as ThemeMode)}
+        >
+          <option value="system">Follow Windows</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
       </div>
     </section>
   );

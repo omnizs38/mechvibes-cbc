@@ -18,18 +18,22 @@ export function UpdatesCard({ updater }: Props) {
           onClick={updater.check}
           disabled={updater.isBusy}
         >
-          Check now
+          {updater.isBusy ? 'Working…' : 'Check now'}
         </button>
       </div>
 
       <div className="field">
         <div className="field-label">
           <label htmlFor="update-channel">Channel</label>
+          <span className="hint">
+            {updater.channel === 'beta' ? 'Pre-releases included' : 'Stable releases only'}
+          </span>
         </div>
         <select
           id="update-channel"
           className="input"
           value={updater.channel}
+          disabled={updater.isBusy}
           onChange={(event) => updater.setChannel(event.target.value)}
         >
           <option value="stable">Stable</option>
@@ -51,12 +55,19 @@ export function UpdatesCard({ updater }: Props) {
         </div>
       ) : null}
 
-      {updater.canDownload ? (
+      {updater.hasDetails ? (
         <>
-          <div className="btn-row" style={{ marginTop: 'var(--space-3)' }}>
-            <button type="button" className="btn btn-primary" onClick={updater.download}>
-              Download update
-            </button>
+          <div className="btn-row" style={{ marginTop: 'var(--space-2)' }}>
+            {updater.canDownload ? (
+              <button type="button" className="btn btn-primary" onClick={updater.download}>
+                Download update
+              </button>
+            ) : null}
+            {updater.canInstall ? (
+              <button type="button" className="btn btn-primary" onClick={updater.install}>
+                Restart and install
+              </button>
+            ) : null}
             <button
               type="button"
               className="btn-ghost"
@@ -68,14 +79,6 @@ export function UpdatesCard({ updater }: Props) {
           </div>
           {notesOpen ? <div className="release-notes">{updater.releaseNotes}</div> : null}
         </>
-      ) : null}
-
-      {updater.canInstall ? (
-        <div className="btn-row" style={{ marginTop: 'var(--space-3)' }}>
-          <button type="button" className="btn btn-primary" onClick={updater.install}>
-            Restart and install
-          </button>
-        </div>
       ) : null}
     </section>
   );
