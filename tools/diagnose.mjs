@@ -241,11 +241,14 @@ function inspectMain(source) {
   const webSecurity = [...code.matchAll(/webSecurity\s*:\s*(\w+)/g)].map((entry) => entry[1]);
   const nodeIntegration = [...code.matchAll(/nodeIntegration\s*:\s*(\w+)/g)].map((entry) => entry[1]);
   info('BrowserWindow flags: webSecurity=[' + webSecurity.join(', ') + '] nodeIntegration=[' + nodeIntegration.join(', ') + ']');
-  const windowCount = (code.match(/new BrowserWindow\(/g) || []).length;
-  info('BrowserWindow instances: ' + windowCount);
-  if (windowCount > webSecurity.filter((value) => value === 'false').length) {
+
+  // tsc emits `new electron_1.BrowserWindow(...)`, so the namespace has to be optional.
+  const windowCount = (code.match(/new\s+(?:[A-Za-z_$][\w$]*\.)*BrowserWindow\(/g) || []).length;
+  const relaxed = webSecurity.filter((value) => value === 'false').length;
+  info('BrowserWindow instances: ' + windowCount + ' (web security disabled in ' + relaxed + ')');
+  if (windowCount > relaxed) {
     warn(
-      'not every window sets webSecurity: false. ES module bundles served over file:// are blocked by CORS in windows that keep web security enabled.',
+      'not every window sets webSecurity: false. ES module bundles served over file:// are blocked by CORS in windows that keep web security enabled, so those windows stay blank even with a correct CSP.',
     );
   }
 }
@@ -266,8 +269,8 @@ function inspectSource(title, source) {
   info('src/renderer-dist entries: ' + (bundled.length ? bundled.join(', ') : '(none)'));
   const assets = source.list('src/renderer-dist/assets');
   info('src/renderer-dist/assets entries: ' + assets.length);
-  if (source.list('src/renderer').length > 0) {
-    warn('src/renderer (uncompiled TSX sources) is present in this build; build.files should exclude it');
+  if (source.kind === 'asar' && source.list('src/renderer').length > 0) {
+    warn('src/renderer (uncompiled TSX sources) is packaged; build.files should exclude it');
   }
   inspectMain(source);
   for (const windowName of WINDOWS) inspectHtml(source, windowName);
@@ -290,6 +293,7 @@ function findInstallations(explicit) {
   );
 
   const found = [];
+  const seen = new Set();
   for (const candidate of candidates) {
     if (!candidate) continue;
     const asar = candidate.endsWith('.asar')
@@ -299,7 +303,12 @@ function findInstallations(explicit) {
           path.join(candidate, 'Resources', 'app.asar'),
           path.join(candidate, 'app.asar'),
         ].find((option) => exists(option));
-    if (asar && !found.includes(asar)) found.push(asar);
+    if (!asar) continue;
+    // Windows paths are case-insensitive, so the same install must not be reported twice.
+    const key = process.platform === 'win32' ? asar.toLowerCase() : asar;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    found.push(asar);
   }
   return found;
 }
@@ -313,6 +322,7 @@ function tailLogs() {
     path.join(os.homedir(), '.config', 'mechvibes'),
   ];
   const logs = [];
+  const seen = new Set();
   for (const root of roots) {
     for (const candidate of [root, path.join(root, 'logs')]) {
       let entries = [];
@@ -322,7 +332,12 @@ function tailLogs() {
         continue;
       }
       for (const entry of entries) {
-        if (entry.endsWith('.log')) logs.push(path.join(candidate, entry));
+        if (!entry.endsWith('.log')) continue;
+        const target = path.join(candidate, entry);
+        const key = process.platform === 'win32' ? target.toLowerCase() : target;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        logs.push(target);
       }
     }
   }
@@ -334,8 +349,8 @@ function tailLogs() {
     const stats = exists(log);
     info(log + '  (' + human(stats.size) + ', modified ' + stats.mtime.toISOString() + ')');
     const lines = fs.readFileSync(log, 'utf8').split(/\r?\n/).filter(Boolean);
-    line('    --- last 60 lines ---');
-    for (const entry of lines.slice(-60)) line('    | ' + entry);
+    line('    --- last 40 lines ---');
+    for (const entry of lines.slice(-40)) line('    | ' + entry);
     line('    --- end ---');
   }
 }
