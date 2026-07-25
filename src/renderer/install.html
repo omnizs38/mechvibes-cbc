@@ -3,9 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <title>Install soundpack</title>
+    <!--
+      The window is loaded from disk (file://), which gives the document an
+      opaque origin. 'self' does not match anything under that scheme, so the
+      file: source is required or the bundled scripts are refused and the
+      window stays blank.
+    -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
+      content="default-src 'self' file: data: blob:; script-src 'self' 'unsafe-inline' file:; style-src 'self' 'unsafe-inline' file:; img-src 'self' file: data: blob:; font-src 'self' file: data:; media-src 'self' file: data: blob:; connect-src 'self' file: data: blob: https:;"
     />
     <link rel="shortcut icon" type="image/png" href="../assets/icon.png" />
   </head>
