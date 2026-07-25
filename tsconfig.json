@@ -1,23 +1,34 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "lib": ["ES2020", "DOM"],
+    "target": "ES2022",
+    "module": "node16",
+    "moduleResolution": "node16",
+    "lib": ["ES2022", "DOM"],
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
-    "strict": false,
-    "noImplicitAny": false,
+    "strict": true,
+    "noImplicitOverride": true,
+    "useUnknownInCatchVariables": false,
+    "exactOptionalPropertyTypes": false,
     "resolveJsonModule": true,
-    "allowJs": true,
+    "allowJs": false,
     "checkJs": false,
     "skipLibCheck": true,
-    "noEmit": true,
+    "sourceMap": true,
+    "newLine": "lf",
     "incremental": true,
     "tsBuildInfoFile": ".tsbuildinfo",
     "types": ["node"]
   },
-  "include": ["src/**/*.js", "src/**/*.ts", "tools/**/*.js"],
-  "exclude": ["node_modules", "dist", "out", "src/audio/**/*", "src/assets/**/*"]
+  "include": ["src/**/*.ts", "tools/**/*.ts", "tests/**/*.ts"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "out",
+    "src/audio/**/*",
+    "src/assets/**/*",
+    "src/renderer/**/*",
+    "src/renderer-dist/**/*"
+  ]
 }

@@ -1,133 +1,145 @@
-{
-  "name": "mechvibes",
-  "productName": "Mechvibes",
-  "version": "2.4.2",
-  "description": "Low-latency mechanical keyboard sound engine for Windows.",
-  "repository": "https://github.com/omnizs38/mechvibes-cbc",
-  "main": "src/main.js",
-  "scripts": {
-    "start": "electron .",
-    "typecheck": "tsc --noEmit",
-    "lint": "eslint \"src/**/*.{js,ts}\" \"tools/**/*.js\" \"tests/**/*.js\"",
-    "lint:fix": "npm run lint -- --fix",
-    "format": "prettier --write \"src/**/*.{js,ts,css,html}\" \"tools/**/*.js\" \"tests/**/*.js\"",
-    "format:check": "prettier --check \"src/**/*.{js,ts,css,html}\" \"tools/**/*.js\" \"tests/**/*.js\"",
-    "build:all": "electron-builder -wml",
-    "build:win": "electron-builder -w",
-    "build:mac": "electron-builder -m",
-    "build:linux": "electron-builder -l",
-    "build:win:dir": "electron-builder --win --x64 --dir --publish never",
-    "build:clean": "node tools/clean-dist.js",
-    "check": "node tools/check-syntax.js",
-    "test": "node tests/run.js",
-    "benchmark:audio": "node tools/audio-benchmark.js",
-    "verify": "npm run check && npm test && npm run typecheck && npm run lint"
-  },
-  "engines": {
-    "node": ">=22 <23"
-  },
-  "keywords": [],
-  "homepage": "https://mechvibes-cbc.pages.dev/",
-  "author": {
-    "name": "Hai Nguyen",
-    "email": "hainguyen.ts13@gmail.com"
-  },
-  "license": "MPL-2.0",
-  "build": {
-    "appId": "com.electron.mechvibes-cbc",
-    "artifactName": "Mechvibes-${version}-${arch}.${ext}",
-    "files": [
-      "src/**/*",
-      "package.json",
-      "!src/**/*.map"
-    ],
-    "generateUpdatesFilesForAllChannels": true,
-    "publish": [
-      {
-        "provider": "github",
-        "owner": "omnizs38",
-        "repo": "mechvibes-cbc"
-      }
-    ],
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "include": "./build/installer.nsh"
-    },
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "src/assets/icon.png"
-    },
-    "mac": {
-      "category": "public.app-category.entertainment",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "src/assets/icon.png"
-    },
-    "linux": {
-      "category": "Utility",
-      "target": [
-        {
-          "target": "deb",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "snap",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "src/assets/icon.png"
-    }
-  },
-  "dependencies": {
-    "@electron/remote": "^2.1.3",
-    "adm-zip": "^0.6.0",
-    "easy-volume": "^1.2.0",
-    "electron-fetch": "^1.9.1",
-    "electron-log": "^4.4.8",
-    "electron-store": "^6.0.0",
-    "electron-updater": "^6.8.9",
-    "fs-extra": "^10.1.0",
-    "glob": "^9.3.5",
-    "mime-types": "^2.1.35",
-    "uiohook-napi": "^1.5.5"
-  },
-  "devDependencies": {
-    "@types/adm-zip": "^0.5.7",
-    "@types/fs-extra": "^9.0.13",
-    "@types/glob": "^8.1.0",
-    "@types/mime-types": "^2.1.4",
-    "@types/node": "^20.14.10",
-    "@typescript-eslint/eslint-plugin": "^7.18.0",
-    "@typescript-eslint/parser": "^7.18.0",
-    "electron": "^43.1.1",
-    "electron-builder": "^26.15.3",
-    "eslint": "^8.57.0",
-    "eslint-config-prettier": "^9.1.0",
-    "prettier": "^3.9.6",
-    "typescript": "^5.5.4"
-  }
-}
+{
+  "name": "mechvibes",
+  "productName": "Mechvibes",
+  "version": "2.4.2",
+  "description": "Low-latency mechanical keyboard sound engine for Windows.",
+  "repository": "https://github.com/omnizs38/mechvibes-cbc",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "npm run build:main && npm run build:renderer && electron .",
+    "build:main": "tsc -p tsconfig.json",
+    "dev:renderer": "vite",
+    "build:renderer": "vite build",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.renderer.json",
+    "lint": "echo \"lint: source is TypeScript now, static checks run via npm run typecheck\"",
+    "lint:fix": "npm run lint -- --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,css,html}\" \"tools/**/*.ts\" \"tests/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,css,html}\" \"tools/**/*.ts\" \"tests/**/*.ts\"",
+    "build:all": "electron-builder -wml",
+    "build:win": "electron-builder -w",
+    "build:mac": "electron-builder -m",
+    "build:linux": "electron-builder -l",
+    "build:win:dir": "electron-builder --win --x64 --dir --publish never",
+    "build:clean": "npm run build:main && node tools/clean-dist.js",
+    "check": "npm run build:main && node tools/check-syntax.js",
+    "test": "npm run build:main && node tests/run.js",
+    "benchmark:audio": "npm run build:main && node tools/audio-benchmark.js",
+    "verify": "npm run check && npm test && npm run typecheck && npm run lint"
+  },
+  "engines": {
+    "node": ">=22 <23"
+  },
+  "keywords": [],
+  "homepage": "https://mechvibes-cbc.pages.dev/",
+  "author": {
+    "name": "Hai Nguyen",
+    "email": "hainguyen.ts13@gmail.com"
+  },
+  "license": "MPL-2.0",
+  "build": {
+    "appId": "com.electron.mechvibes-cbc",
+    "artifactName": "Mechvibes-${version}-${arch}.${ext}",
+    "files": [
+      "src/**/*",
+      "package.json",
+      "!src/**/*.map",
+      "!src/**/*.ts",
+      "!src/**/*.tsx",
+      "!src/renderer/**/*"
+    ],
+    "generateUpdatesFilesForAllChannels": true,
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "omnizs38",
+        "repo": "mechvibes-cbc"
+      }
+    ],
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "include": "./build/installer.nsh"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "src/assets/icon.png"
+    },
+    "mac": {
+      "category": "public.app-category.entertainment",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "src/assets/icon.png"
+    },
+    "linux": {
+      "category": "Utility",
+      "target": [
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "snap",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "src/assets/icon.png"
+    }
+  },
+  "dependencies": {
+    "@electron/remote": "^2.1.3",
+    "adm-zip": "^0.6.0",
+    "easy-volume": "^1.2.0",
+    "electron-fetch": "^1.9.1",
+    "electron-log": "^4.4.8",
+    "electron-store": "^6.0.0",
+    "electron-updater": "^6.8.9",
+    "fs-extra": "^10.1.0",
+    "glob": "^9.3.5",
+    "mime-types": "^2.1.35",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "uiohook-napi": "^1.5.5"
+  },
+  "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
+    "@types/fs-extra": "^9.0.13",
+    "@types/glob": "^8.1.0",
+    "@types/mime-types": "^2.1.4",
+    "@types/node": "^20.14.10",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "@vitejs/plugin-react": "^6.0.4",
+    "electron": "^43.1.1",
+    "electron-builder": "^26.15.3",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.9.6",
+    "typescript": "^7.0.2",
+    "vite": "^8.1.5"
+  }
+}

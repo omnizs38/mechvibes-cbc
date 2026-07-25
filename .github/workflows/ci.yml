@@ -1,7 +1,7 @@
 name: CI
 
 # Runs on every PR and on pushes to main. Proves the tree is sound
-# (syntax, tests, types, lint), audits dependencies, and confirms the app
+# (TypeScript build, syntax, tests, types), audits dependencies, and confirms
 # still packages on all three target operating systems.
 on:
   pull_request:
@@ -101,6 +101,10 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Run verification
         run: npm run verify
+      # electron-builder packages the emitted JavaScript, which is not
+      # committed: compile the main process and the React renderer first.
+      - name: Compile main process and renderer bundles
+        run: npm run build:main && npm run build:renderer
       - name: Build packages
         run: ${{ matrix.build-cmd }}
       - name: Upload compiled artifacts

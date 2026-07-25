@@ -9,3 +9,11 @@ coverage
 .env
 .env.*
 !.env.example
+# Compiled TypeScript output (sources live beside them as .ts)
+src/**/*.js
+src/**/*.js.map
+tools/**/*.js
+tools/**/*.js.map
+tests/**/*.js
+tests/**/*.js.map
+src/renderer-dist

@@ -1,0 +1,228 @@
+/* Soundpack editor window. */
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.editor-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.editor-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-right: auto;
+}
+
+.editor-title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.editor-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.editor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--space-3);
+}
+
+/* ---------- keyboard ---------- */
+.keyboard {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: visible;
+}
+
+.key-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.key-row {
+  display: flex;
+  gap: 4px;
+}
+
+.key {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 38px;
+  height: 38px;
+  padding: 0 6px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 2px 0 var(--border-strong);
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.06s ease, box-shadow 0.06s ease, border-color 0.15s ease;
+}
+
+.key:hover {
+  border-color: var(--accent);
+}
+
+.key.is-blank {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.key.has-sound {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.key.is-selected {
+  transform: translateY(2px);
+  box-shadow: none;
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  z-index: 3;
+}
+
+.key.size-w15 {
+  min-width: 58px;
+}
+.key.size-w20 {
+  min-width: 80px;
+}
+.key.size-w225 {
+  min-width: 90px;
+}
+.key.size-w275 {
+  min-width: 110px;
+}
+.key.size-w600 {
+  min-width: 240px;
+}
+.key.size-h20 {
+  height: 80px;
+}
+
+/* ---------- popover ---------- */
+.key-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  width: 240px;
+  padding: var(--space-3);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  cursor: default;
+  text-align: left;
+  font-weight: 400;
+  font-size: 12px;
+}
+
+.key-popover.is-up {
+  top: auto;
+  bottom: calc(100% + 8px);
+}
+
+.key-popover.is-left {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
+.popover-title {
+  margin-bottom: var(--space-2);
+  font-weight: 600;
+}
+
+.popover-inputs {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.popover-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* ---------- manual list ---------- */
+.manual-zones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--space-3);
+}
+
+.manual-key {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.manual-key.has-sound {
+  background: var(--accent-soft);
+  border-radius: var(--radius-sm);
+}
+
+.manual-key-label {
+  font-weight: 600;
+  font-size: 12px;
+  min-width: 64px;
+}
+
+.manual-key-inputs {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.manual-key-inputs .input {
+  height: 30px;
+  width: 90px;
+}
+
+.manual-key-inputs .input.is-wide {
+  width: 180px;
+}
+
+/* ---------- result ---------- */
+.result-json {
+  max-height: 320px;
+  overflow: auto;
+  margin: 0;
+  padding: var(--space-3);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre;
+}

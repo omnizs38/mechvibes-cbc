@@ -1,0 +1,39 @@
+/* Installer window — compact, self-resizing dialog. */
+
+.installer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.installer-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.installer-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.installer-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.installer-pack-name {
+  margin-top: var(--space-1);
+  font-size: 16px;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.installer-question {
+  font-size: 13px;
+  color: var(--text-muted);
+}

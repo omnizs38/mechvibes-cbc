@@ -32,6 +32,11 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
 
+      # tools/*.ts are compiled to JavaScript on demand; the emitted .js files
+      # are not committed, so the release tooling must be built before use.
+      - name: Compile TypeScript sources
+        run: npm run build:main
+
       - name: Verify tag and package version
         id: verify-tag
         run: node tools/verify-release-tag.js "${GITHUB_REF_NAME}"
@@ -43,7 +48,7 @@ jobs:
             echo "### Release validation failed"
             echo ""
             echo "The pushed tag \`${GITHUB_REF_NAME}\` (commit \`${GITHUB_SHA}\`) does not"
-            echo "satisfy \`tools/verify-release-tag.js\`. This almost always means the tag"
+            echo "satisfy \`tools/verify-release-tag.ts\`. This almost always means the tag"
             echo "was created against a commit where \`package.json\`'s \`version\` had not"
             echo "yet been bumped to match the tag name."
             echo ""
@@ -119,6 +124,11 @@ jobs:
 
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
+
+      # electron-builder packages the emitted JavaScript, which is not
+      # committed: compile the main process and the React renderer first.
+      - name: Compile main process and renderer bundles
+        run: npm run build:main && npm run build:renderer
 
       - name: Build release packages
         run: ${{ matrix.build-cmd }}
