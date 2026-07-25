@@ -8,30 +8,47 @@ type StoreLike = {
 
 type StoreConstructor = new () => StoreLike;
 
+type RemoteModule = {
+  app: { getAppPath(): string };
+  require(id: string): unknown;
+};
+
 let cachedStore: StoreLike | null = null;
 
 /**
  * Resolve the settings store for whichever process we are running in.
  *
- * electron-store reads `app.getPath('userData')` when it is constructed. That
- * only works in the main process; elsewhere the library falls back to
- * `electron.remote.app`, which Electron removed in v14, and the module throws
- * before anything else can run. This file is loaded from both sides — the main
- * process requires it directly, the renderer through `requireFromSrc` — so the
- * constructor has to be chosen at call time, not at import time.
+ * electron-store reads `app.getPath('userData')` on construction. That only
+ * works in the main process; elsewhere it falls back to `electron.remote.app`,
+ * removed from Electron in v14, and throws before anything else runs. This
+ * module is loaded from both sides — directly by the main process, and through
+ * `requireFromSrc` by the renderer — so the constructor must be picked at call
+ * time rather than at import time.
  *
- * Building it lazily also keeps a stray import from touching the filesystem.
+ * On the renderer side the package is resolved from the application root:
+ * @electron/remote resolves bare specifiers relative to itself and would not
+ * find it otherwise.
  */
 function getStore(): StoreLike {
   if (cachedStore) return cachedStore;
 
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  /* eslint-disable @typescript-eslint/no-var-requires */
   const electron = require('electron') as { app?: unknown };
-  const StoreCtor: StoreConstructor = electron.app
-    ? // eslint-disable-next-line @typescript-eslint/no-var-requires
-      (require('electron-store') as StoreConstructor)
-    : // eslint-disable-next-line @typescript-eslint/no-var-requires
-      (require('@electron/remote').require('electron-store') as StoreConstructor);
+
+  let StoreCtor: StoreConstructor;
+  if (electron.app) {
+    StoreCtor = require('electron-store') as StoreConstructor;
+  } else {
+    const remote = require('@electron/remote') as RemoteModule;
+    const path = require('path') as typeof import('node:path');
+    const absolute = path.join(remote.app.getAppPath(), 'node_modules', 'electron-store');
+    try {
+      StoreCtor = remote.require(absolute) as StoreConstructor;
+    } catch {
+      StoreCtor = remote.require('electron-store') as StoreConstructor;
+    }
+  }
+  /* eslint-enable @typescript-eslint/no-var-requires */
 
   cachedStore = new StoreCtor();
   return cachedStore;

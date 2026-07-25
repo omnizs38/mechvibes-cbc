@@ -1,4 +1,4 @@
-import { remote } from './electron';
+import { appRoot, nodePath, remote } from './electron';
 
 type ElectronStore = {
   get(key: string): unknown;
@@ -6,21 +6,45 @@ type ElectronStore = {
   has(key: string): boolean;
 };
 
+type StoreConstructor = new () => ElectronStore;
+
 /**
- * electron-store must be instantiated in the main process.
+ * Load electron-store inside the main process.
  *
- * The library derives its default `cwd` from `app.getPath('userData')`, and
- * when `app` is absent it falls back to `electron.remote.app` — a module that
- * was removed from Electron in v14. Requiring it straight from the renderer
- * therefore throws "Cannot read properties of undefined (reading 'app')"
- * before a single component renders.
+ * Two separate traps have to be avoided here.
  *
- * `remote.require` loads the module on the other side of the bridge, so the
- * constructor sees a real `app` object. The returned proxy keeps the same
- * synchronous get/set/has API the components expect, and both processes end
- * up reading the very same config.json.
+ * The library reads `app.getPath('userData')` when constructed, and falls back
+ * to `electron.remote.app` when `app` is missing. That fallback disappeared in
+ * Electron 14, so constructing the store in the renderer throws
+ * "Cannot read properties of undefined (reading 'app')" at module scope, long
+ * before React can mount — which paints the window blank.
+ *
+ * Going through `remote.require` fixes that, but a bare specifier is resolved
+ * relative to @electron/remote itself (the require stack reads just
+ * "electron"), so the package is not found. Resolving it from the application
+ * root works in development and inside app.asar alike, because Node reads asar
+ * archives transparently.
  */
-const Store = remote.require('electron-store');
+function loadStoreConstructor(): StoreConstructor {
+  const candidates = [nodePath.join(appRoot, 'node_modules', 'electron-store'), 'electron-store'];
+  const failures: string[] = [];
+
+  for (const id of candidates) {
+    try {
+      return remote.require(id) as StoreConstructor;
+    } catch (error) {
+      failures.push(id + ': ' + (error as Error).message);
+    }
+  }
+
+  throw new Error(
+    'electron-store could not be loaded in the main process.\n' + failures.join('\n'),
+  );
+}
+
+const Store = loadStoreConstructor();
+
+/** Settings store living in the main process, proxied over @electron/remote. */
 export const store: ElectronStore = new Store();
 
 export function readString(key: string, fallback = ''): string {
