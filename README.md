@@ -4,21 +4,47 @@
   <img src="https://mechvibes.com/images/icon.png" alt="Mechvibes-cbc Logo" width="128">
 </p>
 
-A modern, open-source application that brings the sound of mechanical keyboards to any keyboard on Windows, macOS, and Linux.
+<h3 align="center">A modern, open-source application that brings the sound of mechanical keyboards to any keyboard on Windows, macOS, and Linux.</h3>
 
 ---
 
 <p align="center">
-  <a href="https://mechvibes-cbc.pages.dev/"><img src="https://img.shields.io/badge/Website-mechvibes--cbc.pages.dev-blueviolet?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Website"></a>
-  <a href="https://github.com/omnizs38/mechvibes-cbc/releases/latest"><img src="https://img.shields.io/github/v/release/omnizs38/mechvibes-cbc?style=for-the-badge&color=success&logo=github" alt="Latest Release"></a>
-  <img src="https://img.shields.io/github/license/omnizs38/mechvibes-cbc?style=for-the-badge&color=blue" alt="License">
-  <img src="https://img.shields.io/github/actions/workflow/status/omnizs38/mechvibes-cbc/ci.yml?branch=main&label=CI&style=for-the-badge&logo=github-actions&logoColor=white" alt="CI Status">
+  <a href="https://mechvibes-cbc.pages.dev/">
+    <img src="https://img.shields.io/badge/Website-mechvibes--cbc.pages.dev-8A2BE2?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Website">
+  </a>
+  <a href="https://github.com/omnizs38/mechvibes-cbc/releases/latest">
+    <img src="https://img.shields.io/github/v/release/omnizs38/mechvibes-cbc?style=for-the-badge&color=2ECC71&logo=github&logoColor=white&label=Release" alt="Latest Release">
+  </a>
+  <a href="https://github.com/omnizs38/mechvibes-cbc/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/omnizs38/mechvibes-cbc?style=for-the-badge&color=3498DB&label=License" alt="License">
+  </a>
+  <a href="https://github.com/omnizs38/mechvibes-cbc/actions/workflows/ci.yml">
+    <img src="https://img.shields.io/github/actions/workflow/status/omnizs38/mechvibes-cbc/ci.yml?branch=main&label=CI&style=for-the-badge&logo=github-actions&logoColor=white&color=2ECC71" alt="CI Status">
+  </a>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Platform-Windows-0078D6?style=flat-square&logo=windows&logoColor=white" alt="Windows Support">
-  <img src="https://img.shields.io/badge/Platform-macOS-000000?style=flat-square&logo=apple&logoColor=white" alt="macOS Support">
-  <img src="https://img.shields.io/badge/Platform-Linux-FCC624?style=flat-square&logo=linux&logoColor=black" alt="Linux Support">
+  <a href="https://github.com/omnizs38/mechvibes-cbc/releases">
+    <img src="https://img.shields.io/github/downloads/omnizs38/mechvibes-cbc/total?style=flat-square&color=orange&logo=github&label=Downloads" alt="Downloads">
+  </a>
+  <a href="https://github.com/omnizs38/mechvibes-cbc/stargazers">
+    <img src="https://img.shields.io/github/stars/omnizs38/mechvibes-cbc?style=flat-square&color=yellow&logo=github&label=Stars" alt="Stars">
+  </a>
+  <a href="https://github.com/omnizs38/mechvibes-cbc/issues">
+    <img src="https://img.shields.io/github/issues/omnizs38/mechvibes-cbc?style=flat-square&color=red&logo=github&label=Issues" alt="Issues">
+  </a>
+  <a href="https://github.com/omnizs38/mechvibes-cbc/pulls">
+    <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square&logo=github" alt="PRs Welcome">
+  </a>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Windows-0078D6?style=flat-square&logo=windows&logoColor=white" alt="Windows Support">
+  <img src="https://img.shields.io/badge/macOS-000000?style=flat-square&logo=apple&logoColor=white" alt="macOS Support">
+  <img src="https://img.shields.io/badge/Linux-FCC624?style=flat-square&logo=linux&logoColor=black" alt="Linux Support">
+  <img src="https://img.shields.io/badge/Electron-47848F?style=flat-square&logo=electron&logoColor=white" alt="Electron">
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript">
+  <img src="https://img.shields.io/badge/React-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React">
 </p>
 
 ---
