@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Mechvibes renderer diagnostics.
+ * Mechvibes renderer diagnostics - TypeScript 7
  *
  * Answers one question: why is a window blank?
  *
@@ -16,8 +16,8 @@
  *   6. the BrowserWindow flags allow ES modules on file://
  *
  * Usage:
- *   node tools/diagnose.mjs                 # working tree + auto-detected install
- *   node tools/diagnose.mjs "C:\\Program Files\\Mechvibes"
+ *   npx ts-node tools/diagnose.ts                 # working tree + auto-detected install
+ *   npx ts-node tools/diagnose.ts "C:\\Program Files\\Mechvibes"
  *
  * The report is printed and written to mechvibes-diagnostics.txt.
  */
@@ -27,32 +27,65 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const WINDOWS = ['app', 'install', 'debug', 'editor'];
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+interface AsarArchive {
+  kind: 'asar';
+  root: string;
+  header: Record<string, unknown>;
+  baseOffset: number;
+}
 
-const report = [];
-let failures = 0;
-let warnings = 0;
+interface FileStats {
+  size: number;
+  mtime?: Date;
+}
 
-const line = (text = '') => report.push(text);
-const section = (title) => {
+interface Source {
+  kind: 'directory' | 'asar';
+  root: string;
+  read: (relativePath: string) => Buffer | null;
+  stat: (relativePath: string) => FileStats | null;
+  list: (relativePath: string) => string[];
+}
+
+interface AsarNode {
+  files?: Record<string, AsarNode>;
+  offset?: number | string;
+  size?: number | string;
+  unpacked?: boolean;
+}
+
+interface HtmlReference {
+  kind: 'script' | 'link';
+  href: string;
+  tag: string;
+}
+
+const WINDOWS: string[] = ['app', 'install', 'debug', 'editor'];
+const repoRoot: string = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+const report: string[] = [];
+let failures: number = 0;
+let warnings: number = 0;
+
+const line = (text: string = ''): void => report.push(text);
+const section = (title: string): void => {
   line('');
   line('='.repeat(72));
   line(title);
   line('='.repeat(72));
 };
-const info = (text) => line('    ' + text);
-const ok = (text) => line('  [ ok ] ' + text);
-const warn = (text) => {
+const info = (text: string): void => line('    ' + text);
+const ok = (text: string): void => line('  [ ok ] ' + text);
+const warn = (text: string): void => {
   warnings += 1;
   line('  [warn] ' + text);
 };
-const bad = (text) => {
+const bad = (text: string): void => {
   failures += 1;
   line('  [FAIL] ' + text);
 };
 
-const exists = (target) => {
+const exists = (target: string): fs.Stats | null => {
   try {
     return fs.statSync(target);
   } catch {
@@ -60,7 +93,7 @@ const exists = (target) => {
   }
 };
 
-const human = (bytes) => {
+const human = (bytes: number): string => {
   if (bytes < 1024) return bytes + ' B';
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
@@ -69,14 +102,14 @@ const human = (bytes) => {
 /* ------------------------------------------------------------------ asar -- */
 
 /** Minimal asar reader: header pickle, then raw reads at baseOffset + offset. */
-function openAsar(asarPath) {
-  const fd = fs.openSync(asarPath, 'r');
+function openAsar(asarPath: string): AsarArchive {
+  const fd: number = fs.openSync(asarPath, 'r');
   try {
-    const head = Buffer.alloc(16);
+    const head: Buffer = Buffer.alloc(16);
     fs.readSync(fd, head, 0, 16, 0);
-    const headerSize = head.readUInt32LE(4);
-    const jsonLength = head.readUInt32LE(12);
-    const jsonBuffer = Buffer.alloc(jsonLength);
+    const headerSize: number = head.readUInt32LE(4);
+    const jsonLength: number = head.readUInt32LE(12);
+    const jsonBuffer: Buffer = Buffer.alloc(jsonLength);
     fs.readSync(fd, jsonBuffer, 0, jsonLength, 16);
     return {
       kind: 'asar',
@@ -89,9 +122,9 @@ function openAsar(asarPath) {
   }
 }
 
-function asarNode(archive, relativePath) {
-  const parts = relativePath.split(/[\\/]+/).filter(Boolean);
-  let node = archive.header;
+function asarNode(archive: AsarArchive, relativePath: string): AsarNode | null {
+  const parts: string[] = relativePath.split(/[\\/]+/).filter(Boolean);
+  let node: any = archive.header;
   for (const part of parts) {
     if (!node || !node.files || !node.files[part]) return null;
     node = node.files[part];
@@ -99,16 +132,16 @@ function asarNode(archive, relativePath) {
   return node;
 }
 
-function asarRead(archive, relativePath) {
-  const node = asarNode(archive, relativePath);
+function asarRead(archive: AsarArchive, relativePath: string): Buffer | null {
+  const node: AsarNode | null = asarNode(archive, relativePath);
   if (!node || node.files) return null;
   if (node.unpacked) {
-    const unpacked = path.join(archive.root + '.unpacked', relativePath);
+    const unpacked: string = path.join(archive.root + '.unpacked', relativePath);
     return exists(unpacked) ? fs.readFileSync(unpacked) : null;
   }
-  const fd = fs.openSync(archive.root, 'r');
+  const fd: number = fs.openSync(archive.root, 'r');
   try {
-    const buffer = Buffer.alloc(Number(node.size));
+    const buffer: Buffer = Buffer.alloc(Number(node.size));
     fs.readSync(fd, buffer, 0, buffer.length, archive.baseOffset + Number(node.offset));
     return buffer;
   } finally {
@@ -119,19 +152,19 @@ function asarRead(archive, relativePath) {
 /* ---------------------------------------------------- filesystem/asar API -- */
 
 /** Both sources expose the same three calls, so the checks stay identical. */
-function fsSource(root) {
+function fsSource(root: string): Source {
   return {
     kind: 'directory',
     root,
-    read: (relativePath) => {
-      const target = path.join(root, relativePath);
+    read: (relativePath: string): Buffer | null => {
+      const target: string = path.join(root, relativePath);
       return exists(target) ? fs.readFileSync(target) : null;
     },
-    stat: (relativePath) => {
-      const stats = exists(path.join(root, relativePath));
-      return stats ? { size: stats.size } : null;
+    stat: (relativePath: string): FileStats | null => {
+      const stats: fs.Stats | null = exists(path.join(root, relativePath));
+      return stats ? { size: stats.size, mtime: stats.mtime } : null;
     },
-    list: (relativePath) => {
+    list: (relativePath: string): string[] => {
       try {
         return fs.readdirSync(path.join(root, relativePath));
       } catch {
@@ -141,18 +174,18 @@ function fsSource(root) {
   };
 }
 
-function asarSource(asarPath) {
-  const archive = openAsar(asarPath);
+function asarSource(asarPath: string): Source {
+  const archive: AsarArchive = openAsar(asarPath);
   return {
     kind: 'asar',
     root: asarPath,
-    read: (relativePath) => asarRead(archive, relativePath),
-    stat: (relativePath) => {
-      const node = asarNode(archive, relativePath);
+    read: (relativePath: string): Buffer | null => asarRead(archive, relativePath),
+    stat: (relativePath: string): FileStats | null => {
+      const node: AsarNode | null = asarNode(archive, relativePath);
       return node && !node.files ? { size: Number(node.size) } : null;
     },
-    list: (relativePath) => {
-      const node = asarNode(archive, relativePath);
+    list: (relativePath: string): string[] => {
+      const node: AsarNode | null = asarNode(archive, relativePath);
       return node && node.files ? Object.keys(node.files) : [];
     },
   };
@@ -160,24 +193,24 @@ function asarSource(asarPath) {
 
 /* ---------------------------------------------------------------- checks -- */
 
-function inspectHtml(source, windowName) {
-  const relativePath = 'src/renderer-dist/' + windowName + '.html';
-  const buffer = source.read(relativePath);
+function inspectHtml(source: Source, windowName: string): void {
+  const relativePath: string = 'src/renderer-dist/' + windowName + '.html';
+  const buffer: Buffer | null = source.read(relativePath);
   if (!buffer) {
     bad(relativePath + ' is missing — the renderer bundle was never built or was excluded from the package');
     return;
   }
-  const html = buffer.toString('utf8');
+  const html: string = buffer.toString('utf8');
   ok(relativePath + ' (' + human(buffer.length) + ')');
 
-  const cspMatch = html.match(/<meta[^>]*Content-Security-Policy[\s\S]*?content="([^"]*)"/i);
+  const cspMatch: RegExpMatchArray | null = html.match(/<meta[^>]*Content-Security-Policy[\s\S]*?content="([^"]*)"/i);
   if (!cspMatch) {
     info('no Content-Security-Policy meta tag');
   } else {
-    const csp = cspMatch[1].replace(/\s+/g, ' ').trim();
+    const csp: string = cspMatch[1].replace(/\s+/g, ' ').trim();
     info('CSP: ' + csp);
-    const scriptSrc = csp.match(/script-src([^;]*)/i);
-    const directive = scriptSrc ? scriptSrc[1] : null;
+    const scriptSrc: RegExpMatchArray | null = csp.match(/script-src([^;]*)/i);
+    const directive: string | null = scriptSrc ? scriptSrc[1] : null;
     if (directive && !/\bfile:/.test(directive)) {
       bad(
         windowName +
@@ -188,10 +221,10 @@ function inspectHtml(source, windowName) {
     }
   }
 
-  const references = [];
-  const scriptPattern = /<script[^>]*\ssrc="([^"]+)"[^>]*>/gi;
-  const linkPattern = /<link[^>]*\shref="([^"]+)"[^>]*>/gi;
-  let match;
+  const references: HtmlReference[] = [];
+  const scriptPattern: RegExp = /<script[^>]*\ssrc="([^"]+)"[^>]*>/gi;
+  const linkPattern: RegExp = /<link[^>]*\shref="([^"]+)"[^>]*>/gi;
+  let match: RegExpExecArray | null;
   while ((match = scriptPattern.exec(html))) references.push({ kind: 'script', href: match[1], tag: match[0] });
   while ((match = linkPattern.exec(html))) references.push({ kind: 'link', href: match[1], tag: match[0] });
 
@@ -200,10 +233,10 @@ function inspectHtml(source, windowName) {
       info('remote reference, not checked: ' + reference.href);
       continue;
     }
-    const resolved = path
+    const resolved: string = path
       .join('src/renderer-dist', path.dirname(windowName + '.html'), reference.href)
       .replace(/\\/g, '/');
-    const stats = source.stat(resolved);
+    const stats: FileStats | null = source.stat(resolved);
     if (stats) {
       ok('  ' + reference.kind + ' ' + reference.href + ' (' + human(stats.size) + ')');
     } else {
@@ -215,22 +248,22 @@ function inspectHtml(source, windowName) {
   }
 }
 
-function inspectMain(source) {
-  const buffer = source.read('src/main.js');
+function inspectMain(source: Source): void {
+  const buffer: Buffer | null = source.read('src/main.js');
   if (!buffer) {
     bad('src/main.js is missing — the main process was not compiled (npm run build:main)');
     return;
   }
   ok('src/main.js (' + human(buffer.length) + ')');
-  const code = buffer.toString('utf8');
+  const code: string = buffer.toString('utf8');
 
-  const loads = [...code.matchAll(/loadFile\(\s*['"]([^'"]+)['"]/g)].map((entry) => entry[1]);
+  const loads: string[] = [...code.matchAll(/loadFile\(\s*['"]([^'"]+)['"]/g)].map((entry): string => entry[1]);
   if (loads.length === 0) {
     warn('no loadFile() call found in the compiled main process');
   }
   for (const target of loads) {
-    const normalized = target.replace(/^\.\//, '');
-    const stats = source.stat(normalized);
+    const normalized: string = target.replace(/^\.\//, '');
+    const stats: FileStats | null = source.stat(normalized);
     if (stats) {
       ok('loadFile(' + target + ') resolves (' + human(stats.size) + ')');
     } else {
@@ -238,13 +271,13 @@ function inspectMain(source) {
     }
   }
 
-  const webSecurity = [...code.matchAll(/webSecurity\s*:\s*(\w+)/g)].map((entry) => entry[1]);
-  const nodeIntegration = [...code.matchAll(/nodeIntegration\s*:\s*(\w+)/g)].map((entry) => entry[1]);
+  const webSecurity: string[] = [...code.matchAll(/webSecurity\s*:\s*(\w+)/g)].map((entry): string => entry[1]);
+  const nodeIntegration: string[] = [...code.matchAll(/nodeIntegration\s*:\s*(\w+)/g)].map((entry): string => entry[1]);
   info('BrowserWindow flags: webSecurity=[' + webSecurity.join(', ') + '] nodeIntegration=[' + nodeIntegration.join(', ') + ']');
 
   // tsc emits `new electron_1.BrowserWindow(...)`, so the namespace has to be optional.
-  const windowCount = (code.match(/new\s+(?:[A-Za-z_$][\w$]*\.)*BrowserWindow\(/g) || []).length;
-  const relaxed = webSecurity.filter((value) => value === 'false').length;
+  const windowCount: number = (code.match(/new\s+(?:[A-Za-z_$][\w$]*\.)*BrowserWindow\(/g) || []).length;
+  const relaxed: number = webSecurity.filter((value): boolean => value === 'false').length;
   info('BrowserWindow instances: ' + windowCount + ' (web security disabled in ' + relaxed + ')');
   if (windowCount > relaxed) {
     warn(
@@ -253,21 +286,21 @@ function inspectMain(source) {
   }
 }
 
-function inspectSource(title, source) {
+function inspectSource(title: string, source: Source): void {
   section(title + '  [' + source.kind + ']');
   info(source.root);
-  const packageBuffer = source.read('package.json');
+  const packageBuffer: Buffer | null = source.read('package.json');
   if (packageBuffer) {
     try {
-      const manifest = JSON.parse(packageBuffer.toString('utf8'));
+      const manifest: any = JSON.parse(packageBuffer.toString('utf8'));
       info('version ' + manifest.version + ', main = ' + manifest.main);
     } catch {
       warn('package.json could not be parsed');
     }
   }
-  const bundled = source.list('src/renderer-dist');
+  const bundled: string[] = source.list('src/renderer-dist');
   info('src/renderer-dist entries: ' + (bundled.length ? bundled.join(', ') : '(none)'));
-  const assets = source.list('src/renderer-dist/assets');
+  const assets: string[] = source.list('src/renderer-dist/assets');
   info('src/renderer-dist/assets entries: ' + assets.length);
   if (source.kind === 'asar' && source.list('src/renderer').length > 0) {
     warn('src/renderer (uncompiled TSX sources) is packaged; build.files should exclude it');
@@ -278,10 +311,10 @@ function inspectSource(title, source) {
 
 /* ------------------------------------------------------------- discovery -- */
 
-function findInstallations(explicit) {
-  const candidates = [];
+function findInstallations(explicit: string | undefined): string[] {
+  const candidates: string[] = [];
   if (explicit) candidates.push(explicit);
-  const home = os.homedir();
+  const home: string = os.homedir();
   candidates.push(
     path.join(process.env.LOCALAPPDATA || path.join(home, 'AppData', 'Local'), 'Programs', 'Mechvibes'),
     path.join(process.env.LOCALAPPDATA || path.join(home, 'AppData', 'Local'), 'Programs', 'mechvibes'),
@@ -292,20 +325,20 @@ function findInstallations(explicit) {
     '/opt/Mechvibes',
   );
 
-  const found = [];
-  const seen = new Set();
+  const found: string[] = [];
+  const seen: Set<string> = new Set();
   for (const candidate of candidates) {
     if (!candidate) continue;
-    const asar = candidate.endsWith('.asar')
+    const asar: string | undefined = candidate.endsWith('.asar')
       ? candidate
       : [
           path.join(candidate, 'resources', 'app.asar'),
           path.join(candidate, 'Resources', 'app.asar'),
           path.join(candidate, 'app.asar'),
-        ].find((option) => exists(option));
+        ].find((option): boolean => exists(option) !== null);
     if (!asar) continue;
     // Windows paths are case-insensitive, so the same install must not be reported twice.
-    const key = process.platform === 'win32' ? asar.toLowerCase() : asar;
+    const key: string = process.platform === 'win32' ? asar.toLowerCase() : asar;
     if (seen.has(key)) continue;
     seen.add(key);
     found.push(asar);
@@ -313,19 +346,19 @@ function findInstallations(explicit) {
   return found;
 }
 
-function tailLogs() {
+function tailLogs(): void {
   section('RUNTIME LOG');
-  const roots = [
+  const roots: string[] = [
     path.join(process.env.APPDATA || '', 'mechvibes'),
     path.join(process.env.APPDATA || '', 'Mechvibes'),
     path.join(os.homedir(), 'Library', 'Logs', 'Mechvibes'),
     path.join(os.homedir(), '.config', 'mechvibes'),
   ];
-  const logs = [];
-  const seen = new Set();
+  const logs: string[] = [];
+  const seen: Set<string> = new Set();
   for (const root of roots) {
     for (const candidate of [root, path.join(root, 'logs')]) {
-      let entries = [];
+      let entries: string[] = [];
       try {
         entries = fs.readdirSync(candidate);
       } catch {
@@ -333,8 +366,8 @@ function tailLogs() {
       }
       for (const entry of entries) {
         if (!entry.endsWith('.log')) continue;
-        const target = path.join(candidate, entry);
-        const key = process.platform === 'win32' ? target.toLowerCase() : target;
+        const target: string = path.join(candidate, entry);
+        const key: string = process.platform === 'win32' ? target.toLowerCase() : target;
         if (seen.has(key)) continue;
         seen.add(key);
         logs.push(target);
@@ -346,9 +379,10 @@ function tailLogs() {
     return;
   }
   for (const log of logs) {
-    const stats = exists(log);
-    info(log + '  (' + human(stats.size) + ', modified ' + stats.mtime.toISOString() + ')');
-    const lines = fs.readFileSync(log, 'utf8').split(/\r?\n/).filter(Boolean);
+    const stats: fs.Stats | null = exists(log);
+    if (!stats) continue;
+    info(log + '  (' + human(stats.size) + ', modified ' + stats.mtime?.toISOString() + ')');
+    const lines: string[] = fs.readFileSync(log, 'utf8').split(/\r?\n/).filter(Boolean);
     line('    --- last 40 lines ---');
     for (const entry of lines.slice(-40)) line('    | ' + entry);
     line('    --- end ---');
@@ -368,17 +402,17 @@ if (exists(path.join(repoRoot, 'package.json'))) {
   warn('working tree not found next to the script');
 }
 
-const installations = findInstallations(process.argv[2]);
+const installations: string[] = findInstallations(process.argv[2]);
 if (installations.length === 0) {
   section('INSTALLED BUILD');
-  warn('no app.asar found. Pass the installation directory explicitly: node tools/diagnose.mjs "C:\\Program Files\\Mechvibes"');
+  warn('no app.asar found. Pass the installation directory explicitly: npx ts-node tools/diagnose.ts "C:\\Program Files\\Mechvibes"');
 } else {
   for (const asar of installations) {
     try {
       inspectSource('INSTALLED BUILD', asarSource(asar));
     } catch (error) {
       section('INSTALLED BUILD');
-      bad('could not read ' + asar + ': ' + error.message);
+      bad('could not read ' + asar + ': ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 }
@@ -393,8 +427,8 @@ if (failures === 0) {
   info('  2. copy everything in the Console tab, red entries first');
 }
 
-const output = report.join('\n') + '\n';
-const outputPath = path.join(process.cwd(), 'mechvibes-diagnostics.txt');
+const output: string = report.join('\n') + '\n';
+const outputPath: string = path.join(process.cwd(), 'mechvibes-diagnostics.txt');
 fs.writeFileSync(outputPath, output, 'utf8');
 process.stdout.write(output);
 process.stdout.write('\nReport written to ' + outputPath + '\n');
