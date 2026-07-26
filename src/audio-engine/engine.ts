@@ -79,7 +79,7 @@ export class WebAudioEngine {
   }
 
   async loadManifest(manifest: AudioManifest): Promise<void> {
-    this.graph.ensureCreated();
+    const context = this.graph.ensureCreated();
     this.stopAll();
     this.selector.reset();
     this.manifest = manifest;
@@ -91,7 +91,7 @@ export class WebAudioEngine {
       now: this.now,
     });
     this.cache = new SampleCache({
-      context: this.graph.context as unknown as AudioContext,
+      context,
       fetchImpl: this.fetchImpl,
       readSourceImpl: this.readSourceImpl,
       budgetBytes: manifest.cacheBudgetBytes,
@@ -136,13 +136,13 @@ export class WebAudioEngine {
 
     const cached = this.cache.get(sample.source);
     if (cached) {
-      this.record(this.scheduler.schedule(cached as unknown as AudioBuffer, sample, layer, event));
+      this.record(this.scheduler.schedule(cached, sample, layer, event));
       return Promise.resolve(true);
     }
     this.metrics.cacheMisses += 1;
     return this.cache.load(sample.source).then((buffer) => {
       if (!this.scheduler) return false;
-      this.record(this.scheduler.schedule(buffer as unknown as AudioBuffer, sample, layer, event));
+      this.record(this.scheduler.schedule(buffer, sample, layer, event));
       return true;
     });
   }

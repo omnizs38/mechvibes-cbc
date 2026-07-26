@@ -40,9 +40,12 @@ export class AudioGraph {
     this.packGain = 1;
   }
 
-  /** Lazily builds `master gain -> compressor -> destination`. Idempotent. */
-  ensureCreated(): void {
-    if (this.context) return;
+  /**
+   * Lazily builds `master gain -> compressor -> destination`. Idempotent.
+   * Returns the live context so callers can use it without re-null-checking.
+   */
+  ensureCreated(): SinkCapableAudioContext {
+    if (this.context) return this.context;
     const context = this.contextFactory() as SinkCapableAudioContext;
     this.context = context;
     this.masterGainNode = context.createGain();
@@ -55,6 +58,7 @@ export class AudioGraph {
     this.masterGainNode.connect(this.compressorNode);
     this.compressorNode.connect(context.destination);
     this.applyGain();
+    return context;
   }
 
   /** The node voices connect their per-voice gain to. */

@@ -6,6 +6,7 @@ export const MAX_SAMPLE_BYTES = 64 * 1024 * 1024;
 export interface DecodedBuffer {
   length?: number;
   numberOfChannels?: number;
+  duration?: number;
 }
 
 export interface DecodingContext {

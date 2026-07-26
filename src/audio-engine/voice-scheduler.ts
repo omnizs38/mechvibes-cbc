@@ -13,6 +13,17 @@ export interface VoiceSchedulerOptions {
 }
 
 /**
+ * What the scheduler needs from a decoded sample: its duration. At runtime this
+ * is a real Web Audio `AudioBuffer` (structurally a superset), but the engine
+ * keeps buffers behind the abstract {@link DecodedBuffer} type for testability,
+ * so the scheduler accepts that shape and narrows to `AudioBuffer` only at the
+ * single point where it assigns the buffer to a source node.
+ */
+export interface SchedulableBuffer {
+  duration?: number;
+}
+
+/**
  * Schedules a single decoded buffer as one voice: pitch (with optional random
  * variation), an attack/release amplitude envelope, sample offset/duration
  * windowing, and reservation in the {@link VoicePool}. Returns the wall-clock
@@ -37,7 +48,7 @@ export class VoiceScheduler {
   }
 
   schedule(
-    buffer: AudioBuffer,
+    buffer: SchedulableBuffer,
     sample: ManifestSample,
     layer: ManifestLayer,
     event: PlaybackEvent,
@@ -49,7 +60,9 @@ export class VoiceScheduler {
 
     const source = context.createBufferSource();
     const gainNode = context.createGain();
-    source.buffer = buffer;
+    // Abstract decoded buffer -> DOM AudioBuffer boundary: at runtime this is a
+    // real AudioBuffer produced by AudioContext.decodeAudioData.
+    source.buffer = buffer as unknown as AudioBuffer;
 
     const variation =
       layer.pitchVariationCents > 0 ? (this.random() * 2 - 1) * layer.pitchVariationCents : 0;
@@ -63,7 +76,7 @@ export class VoiceScheduler {
     const attackSeconds = layer.envelope.attackMs / 1000;
     const releaseSeconds = layer.envelope.releaseMs / 1000;
     const offset = Math.max(0, sample.offsetSeconds || 0);
-    const availableDuration = Math.max(0.001, buffer.duration - offset);
+    const availableDuration = Math.max(0.001, (buffer.duration ?? 0) - offset);
     const duration = sample.durationSeconds
       ? Math.min(sample.durationSeconds, availableDuration)
       : availableDuration;
