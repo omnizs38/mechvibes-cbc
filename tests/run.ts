@@ -692,6 +692,44 @@ test('voice scheduler reserves one voice and starts the buffer window', () => {
   assert.equal(delay, 0);
 });
 
+test('voice scheduler tolerates a decoded buffer without a duration', () => {
+  // Regression for the DecodedBuffer.duration guard: a buffer whose duration is
+  // missing must fall back to a finite window rather than start on NaN.
+  const starts: unknown[][] = [];
+  const parameter = () => ({
+    value: 0,
+    cancelScheduledValues() {},
+    setValueAtTime() {},
+    linearRampToValueAtTime() {},
+  });
+  const node = () => ({ connect() {}, disconnect() {} });
+  const context = {
+    currentTime: 2,
+    createGain: () => ({ ...node(), gain: parameter() }),
+    createBufferSource: () => ({
+      ...node(),
+      buffer: null,
+      playbackRate: { value: 1 },
+      stop() {},
+      start: (...args: unknown[]) => starts.push(args),
+      onended: null,
+    }),
+  };
+  const graph = { context, masterNode: node() };
+  const scheduler = new VoiceScheduler({ graph, voicePool: new VoicePool(4), random: () => 0.5, now: () => 5 });
+  scheduler.schedule(
+    {},
+    { source: 'a.wav', gain: 1, pitch: 0 },
+    { samples: [], mode: 'round-robin', gain: 1, pitchVariationCents: 0, priority: 5, envelope: { attackMs: 0, releaseMs: 10 } },
+    { type: 'keydown', keycode: 30 },
+  );
+  assert.equal(starts.length, 1);
+  const [when, offset, duration] = starts[0] as number[];
+  assert.equal(when, 2);
+  assert.equal(offset, 0);
+  assert.ok(Number.isFinite(duration) && duration > 0, 'duration falls back to a finite window');
+});
+
 test('audio-engine index exposes the public facade', () => {
   assert.equal(typeof audioEngineIndex.WebAudioEngine, 'function');
   assert.equal(typeof audioEngineIndex.AudioGraph, 'function');
