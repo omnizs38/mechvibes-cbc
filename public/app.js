@@ -1,164 +1,55 @@
 /**
- * Mechvibes Website - TypeScript 7 (JavaScript version)
- * Minimalist SPA with navigation, theme toggle, and GitHub releases integration
+ * Mechvibes Website
+ * Modern minimalist design with GitHub releases integration
  */
 
-// Configuration
 const GITHUB_REPO = 'omnizs38/mechvibes-cbc';
-const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases`;
+const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
 
-// DOM Elements
-const themeToggleBtn = document.getElementById('themeToggle');
-const navLinks = document.querySelectorAll('.nav-link');
-const navMenu = document.getElementById('navMenu');
-const releasesList = document.getElementById('releases-list');
-
-// State
-let currentTheme = 'light';
-
-/**
- * Initialize the application
- */
-function init() {
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
     initTheme();
-    setupEventListeners();
-    loadReleases();
-    observeSections();
-}
+    loadLatestRelease();
+    setupDownloadLink();
+});
 
 /**
- * Initialize theme from localStorage or system preference
+ * Initialize theme from localStorage
  */
 function initTheme() {
-    const savedTheme = localStorage.getItem('theme');
+    const themeToggle = document.getElementById('themeToggle');
+    const savedTheme = localStorage.getItem('theme') || 'light';
     
-    if (savedTheme) {
-        currentTheme = savedTheme;
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        currentTheme = 'dark';
-    }
-    
-    applyTheme(currentTheme);
-}
-
-/**
- * Apply theme to document
- */
-function applyTheme(theme) {
-    currentTheme = theme;
-    const isDark = theme === 'dark';
-    
-    if (isDark) {
+    if (savedTheme === 'dark') {
         document.body.classList.add('dark-mode');
-    } else {
-        document.body.classList.remove('dark-mode');
+        updateThemeIcon();
     }
     
-    updateThemeIcon();
-    localStorage.setItem('theme', theme);
-}
-
-/**
- * Update theme toggle button icon
- */
-function updateThemeIcon() {
-    const icon = themeToggleBtn.querySelector('.theme-icon');
-    if (icon) {
-        icon.textContent = currentTheme === 'dark' ? '☀️' : '🌙';
-    }
-}
-
-/**
- * Setup event listeners
- */
-function setupEventListeners() {
-    // Theme toggle
-    themeToggleBtn.addEventListener('click', toggleTheme);
-    
-    // Navigation links
-    navLinks.forEach(link => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            const target = link.getAttribute('data-section');
-            if (target) {
-                navigateToSection(target);
-            }
-        });
-    });
-    
-    // Update active nav link on scroll
-    window.addEventListener('scroll', updateActiveNavLink);
+    themeToggle.addEventListener('click', toggleTheme);
 }
 
 /**
  * Toggle between light and dark theme
  */
 function toggleTheme() {
-    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-    applyTheme(newTheme);
+    const isDarkMode = document.body.classList.toggle('dark-mode');
+    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+    updateThemeIcon();
 }
 
 /**
- * Navigate to section
+ * Update theme icon
  */
-function navigateToSection(sectionId) {
-    const section = document.getElementById(sectionId);
-    if (section) {
-        section.scrollIntoView({ behavior: 'smooth' });
-        updateActiveNavLink();
-    }
+function updateThemeIcon() {
+    const icon = document.querySelector('.theme-icon');
+    const isDarkMode = document.body.classList.contains('dark-mode');
+    icon.textContent = isDarkMode ? '☀️' : '🌙';
 }
 
 /**
- * Update active navigation link based on scroll position
+ * Load latest release from GitHub API
  */
-function updateActiveNavLink() {
-    const sections = document.querySelectorAll('.section');
-    let currentSection = '';
-    
-    sections.forEach(section => {
-        const rect = section.getBoundingClientRect();
-        if (rect.top <= 100) {
-            currentSection = section.id;
-        }
-    });
-    
-    navLinks.forEach(link => {
-        const target = link.getAttribute('data-section');
-        if (target === currentSection) {
-            link.classList.add('active');
-        } else {
-            link.classList.remove('active');
-        }
-    });
-}
-
-/**
- * Observe sections for intersection (lazy loading animations)
- */
-function observeSections() {
-    const observerOptions = {
-        threshold: 0.1,
-        rootMargin: '0px 0px -50px 0px'
-    };
-    
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('visible');
-            }
-        });
-    }, observerOptions);
-    
-    document.querySelectorAll('.section').forEach(section => {
-        observer.observe(section);
-    });
-}
-
-/**
- * Load releases from GitHub API
- */
-async function loadReleases() {
+async function loadLatestRelease() {
     try {
         const response = await fetch(GITHUB_API_URL, {
             headers: {
@@ -167,192 +58,106 @@ async function loadReleases() {
         });
         
         if (!response.ok) {
-            throw new Error(`GitHub API error: ${response.status}`);
+            throw new Error('Failed to fetch release');
         }
         
-        const releases = await response.json();
-        
-        if (releases.length === 0) {
-            displayNoReleases();
-            return;
-        }
-        
-        // Display latest 5 releases
-        const latestReleases = releases.slice(0, 5);
-        displayReleases(latestReleases);
+        const release = await response.json();
+        displayRelease(release);
     } catch (error) {
-        console.error('Failed to load releases:', error);
-        displayReleasesError();
+        console.error('Error loading release:', error);
+        displayReleaseError();
     }
 }
 
 /**
- * Display releases in the DOM
+ * Display release information
  */
-function displayReleases(releases) {
-    releasesList.innerHTML = '';
+function displayRelease(release) {
+    // Update version in hero
+    const versionEl = document.getElementById('latestVersion');
+    if (versionEl) {
+        versionEl.textContent = release.tag_name;
+    }
     
-    releases.forEach((release, index) => {
-        const element = createReleaseElement(release, index);
-        releasesList.appendChild(element);
-    });
-}
-
-/**
- * Create a release element
- */
-function createReleaseElement(release, index) {
-    const div = document.createElement('div');
-    div.className = 'release-item';
-    div.style.animationDelay = `${index * 0.1}s`;
+    // Update release card
+    const releaseName = document.getElementById('releaseName');
+    const releaseDate = document.getElementById('releaseDate');
+    const releaseBody = document.getElementById('releaseBody');
+    const releaseLink = document.getElementById('releaseLink');
     
-    const dateStr = new Date(release.published_at).toLocaleDateString('en-US', {
+    const date = new Date(release.published_at).toLocaleDateString('en-US', {
         year: 'numeric',
-        month: 'short',
+        month: 'long',
         day: 'numeric'
     });
     
-    const isLatest = index === 0;
-    const tagHTML = isLatest ? '<span class="release-tag">Latest</span>' : '';
-    
-    // Truncate body if too long
-    let bodyText = release.body || 'No description provided.';
-    if (bodyText.length > 300) {
-        bodyText = bodyText.substring(0, 300) + '...';
+    let bodyText = release.body || 'No description available.';
+    if (bodyText.length > 500) {
+        bodyText = bodyText.substring(0, 500) + '...';
     }
     
-    div.innerHTML = `
-        <div class="release-header">
-            <div>
-                <div class="release-title">${escapeHtml(release.name || release.tag_name)}</div>
-                <div class="release-date">${dateStr}</div>
-            </div>
-            ${tagHTML}
-        </div>
-        <div class="release-body">${escapeHtml(bodyText).replace(/\n/g, '<br>')}</div>
-        <a href="${release.html_url}" target="_blank" rel="noopener noreferrer" class="release-link">
-            View Release →
-        </a>
-    `;
-    
-    return div;
-}
-
-/**
- * Display no releases message
- */
-function displayNoReleases() {
-    releasesList.innerHTML = '<div class="loading">No releases found.</div>';
+    releaseName.textContent = release.name || release.tag_name;
+    releaseDate.textContent = date;
+    releaseBody.textContent = bodyText;
+    releaseLink.href = release.html_url;
+    releaseLink.target = '_blank';
+    releaseLink.rel = 'noopener noreferrer';
 }
 
 /**
  * Display error message
  */
-function displayReleasesError() {
-    releasesList.innerHTML = `
-        <div class="loading">
-            Failed to load releases. 
-            <a href="https://github.com/${GITHUB_REPO}/releases" target="_blank" rel="noopener noreferrer">
+function displayReleaseError() {
+    const releaseCard = document.getElementById('release-card');
+    releaseCard.innerHTML = `
+        <p style="color: var(--color-text-secondary); text-align: center;">
+            Could not load release information. 
+            <a href="https://github.com/${GITHUB_REPO}/releases" target="_blank" style="color: var(--color-text); font-weight: 600;">
                 View on GitHub →
             </a>
-        </div>
+        </p>
     `;
 }
 
 /**
- * Escape HTML special characters
+ * Setup download button to link to latest release
  */
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-/**
- * Handle keyboard navigation
- */
-function setupKeyboardNavigation() {
-    document.addEventListener('keydown', (e) => {
-        // Prevent keyboard nav on inputs
-        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-            return;
-        }
+function setupDownloadLink() {
+    const downloadBtn = document.getElementById('downloadBtn');
+    
+    downloadBtn.addEventListener('click', async (e) => {
+        e.preventDefault();
         
-        // Alt + number for quick nav
-        if (e.altKey) {
-            const sections = ['home', 'features', 'about', 'releases', 'docs', 'faq'];
-            const num = parseInt(e.key);
+        try {
+            const response = await fetch(GITHUB_API_URL, {
+                headers: {
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
             
-            if (num >= 1 && num <= sections.length) {
-                navigateToSection(sections[num - 1]);
-                e.preventDefault();
+            if (!response.ok) {
+                throw new Error('Failed to fetch release');
             }
+            
+            const release = await response.json();
+            window.open(release.html_url, '_blank');
+        } catch (error) {
+            console.error('Error:', error);
+            // Fallback to releases page
+            window.open(`https://github.com/${GITHUB_REPO}/releases`, '_blank');
         }
     });
 }
 
-/**
- * Setup focus management for accessibility
- */
-function setupAccessibility() {
-    // Skip to main content link (for screen readers)
-    const skipLink = document.createElement('a');
-    skipLink.href = '#main-content';
-    skipLink.className = 'skip-link';
-    skipLink.textContent = 'Skip to main content';
-    document.body.insertBefore(skipLink, document.body.firstChild);
-}
-
-/**
- * Add skip link styles
- */
-function addAccessibilityStyles() {
-    const style = document.createElement('style');
-    style.textContent = `
-        .skip-link {
-            position: absolute;
-            top: -40px;
-            left: 0;
-            background: #000;
-            color: white;
-            padding: 8px;
-            text-decoration: none;
-            z-index: 100;
+// Smooth scroll for nav links
+document.querySelectorAll('a[href^="#"]').forEach(link => {
+    link.addEventListener('click', (e) => {
+        const href = link.getAttribute('href');
+        if (href === '#') {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-        
-        .skip-link:focus {
-            top: 0;
-        }
-    `;
-    document.head.appendChild(style);
-}
-
-/**
- * Initialize analytics (if needed)
- */
-function initAnalytics() {
-    // Track page views
-    if (window.location.hostname !== 'localhost') {
-        // Analytics would be initialized here
-    }
-}
-
-// Start the application when DOM is ready
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-        init();
-        setupKeyboardNavigation();
-        setupAccessibility();
-        addAccessibilityStyles();
-        initAnalytics();
     });
-} else {
-    init();
-    setupKeyboardNavigation();
-    setupAccessibility();
-    addAccessibilityStyles();
-    initAnalytics();
-}
+});
 
-// Expose version for debugging
-console.log('%cMechvibes Website v1.0.0', 'color: #000; font-weight: bold; font-size: 14px;');
+console.log('%cMechvibes Website', 'color: #000; font-weight: bold; font-size: 14px;');

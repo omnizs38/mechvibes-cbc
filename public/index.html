@@ -10,130 +10,132 @@
     
     <link rel="stylesheet" href="./styles.css">
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75' font-weight='bold'>⌨️</text></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
     <div id="app">
         <!-- Navigation -->
         <nav class="navbar">
-            <div class="navbar-container">
-                <div class="navbar-logo">
-                    <span class="logo-icon">⌨️</span>
-                    <span class="logo-text">Mechvibes</span>
+            <div class="nav-container">
+                <a href="#" class="logo">Mechvibes</a>
+                
+                <div class="nav-links">
+                    <a href="#features" class="nav-link">Features</a>
+                    <a href="#about" class="nav-link">About</a>
+                    <a href="#contact" class="nav-link">Contact</a>
                 </div>
                 
                 <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
                     <span class="theme-icon">🌙</span>
                 </button>
-                
-                <ul class="nav-menu" id="navMenu">
-                    <li><a href="#home" class="nav-link" data-section="home">Home</a></li>
-                    <li><a href="#features" class="nav-link" data-section="features">Features</a></li>
-                    <li><a href="#about" class="nav-link" data-section="about">About</a></li>
-                    <li><a href="#releases" class="nav-link" data-section="releases">Releases</a></li>
-                    <li><a href="#docs" class="nav-link" data-section="docs">Docs</a></li>
-                    <li><a href="#faq" class="nav-link" data-section="faq">FAQ</a></li>
-                </ul>
             </div>
         </nav>
 
-        <!-- Main Content -->
         <main id="main-content">
-            <!-- Home Section -->
-            <section id="home" class="section hero">
-                <div class="section-container">
+            <!-- Hero -->
+            <section class="hero">
+                <div class="container">
                     <div class="hero-content">
-                        <h1 class="hero-title">Mechvibes</h1>
-                        <p class="hero-subtitle">Low-latency mechanical keyboard sound engine for Windows</p>
-                        <div class="hero-description">
-                            <p>Transform your keyboard experience with authentic mechanical switch sounds. 
-                            Ultra-low latency, fully customizable, and open source.</p>
-                        </div>
+                        <h1 class="hero-title">
+                            The sound of precision
+                        </h1>
+                        <p class="hero-subtitle">
+                            Ultra-low latency mechanical keyboard sound engine for Windows.
+                            Feel every keystroke with authentic switch sounds.
+                        </p>
+                        
                         <div class="hero-buttons">
-                            <a href="https://github.com/omnizs38/mechvibes-cbc/releases" class="btn btn-primary" target="_blank">
-                                Download Latest
-                            </a>
-                            <a href="https://github.com/omnizs38/mechvibes-cbc" class="btn btn-secondary" target="_blank">
-                                View on GitHub
-                            </a>
+                            <a href="#" class="btn btn-primary" id="downloadBtn">Download</a>
+                            <a href="https://github.com/omnizs38/mechvibes-cbc" target="_blank" class="btn btn-secondary">GitHub</a>
+                        </div>
+                        
+                        <div class="hero-meta">
+                            <div class="meta-item">
+                                <span class="meta-label">Latest Release</span>
+                                <span class="meta-value" id="latestVersion">v2.4.2</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">License</span>
+                                <span class="meta-value">MPL-2.0</span>
+                            </div>
+                            <div class="meta-item">
+                                <span class="meta-label">Status</span>
+                                <span class="meta-value">Active</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Features Section -->
-            <section id="features" class="section">
-                <div class="section-container">
-                    <h2 class="section-title">Features</h2>
-                    <div class="features-grid">
-                        <article class="feature-card">
+            <!-- Features -->
+            <section id="features" class="section-features">
+                <div class="container">
+                    <h2 class="section-heading">Why Mechvibes</h2>
+                    
+                    <div class="features-list">
+                        <div class="feature-item">
                             <div class="feature-icon">⚡</div>
                             <h3>Ultra-Low Latency</h3>
-                            <p>Real-time keyboard sound processing with minimal delay. Feel every keystroke.</p>
-                        </article>
+                            <p>Real-time processing means your sounds keep up with your typing. Zero perceptible delay.</p>
+                        </div>
                         
-                        <article class="feature-card">
+                        <div class="feature-item">
                             <div class="feature-icon">🎛️</div>
                             <h3>Fully Customizable</h3>
-                            <p>Adjust sound profiles, volume, and effects. Make it your own.</p>
-                        </article>
+                            <p>Adjust profiles, volume, and effects. Make it exactly how you want it to sound.</p>
+                        </div>
                         
-                        <article class="feature-card">
+                        <div class="feature-item">
                             <div class="feature-icon">🔊</div>
                             <h3>Premium Sounds</h3>
-                            <p>High-quality mechanical switch samples from various keyboard types.</p>
-                        </article>
+                            <p>High-quality samples from real mechanical keyboards. Authentic and satisfying.</p>
+                        </div>
                         
-                        <article class="feature-card">
+                        <div class="feature-item">
                             <div class="feature-icon">🛠️</div>
                             <h3>Open Source</h3>
-                            <p>Fully transparent. Contribute, fork, or customize to your needs.</p>
-                        </article>
+                            <p>Fully transparent. Fork it, modify it, or contribute. Your keyboard, your rules.</p>
+                        </div>
                         
-                        <article class="feature-card">
+                        <div class="feature-item">
                             <div class="feature-icon">🎮</div>
                             <h3>Gaming Ready</h3>
-                            <p>Perfect for competitive gaming without interfering with performance.</p>
-                        </article>
+                            <p>Optimized for competitive gaming. Enjoy the sound without impacting performance.</p>
+                        </div>
                         
-                        <article class="feature-card">
+                        <div class="feature-item">
                             <div class="feature-icon">📦</div>
                             <h3>Lightweight</h3>
-                            <p>Minimal resource usage. Runs smoothly on any Windows system.</p>
-                        </article>
+                            <p>Minimal resource usage. Runs perfectly on any Windows system without slowdown.</p>
+                        </div>
                     </div>
                 </div>
             </section>
 
-            <!-- About Section -->
-            <section id="about" class="section">
-                <div class="section-container">
-                    <h2 class="section-title">About Mechvibes</h2>
-                    <div class="about-content">
+            <!-- About -->
+            <section id="about" class="section-about">
+                <div class="container">
+                    <div class="about-grid">
                         <div class="about-text">
+                            <h2>Built for mechanical keyboard enthusiasts</h2>
                             <p>
-                                Mechvibes started as a passion project to bring the satisfying sound of mechanical keyboards 
-                                to every Windows user. What began in 2021 has grown into a comprehensive keyboard sound engine 
-                                trusted by thousands of users worldwide.
+                                Mechvibes started in 2021 as a passion project to bring the satisfying click-clack of mechanical keyboards to Windows users everywhere. What began as a simple sound engine has evolved into a comprehensive platform trusted by thousands.
                             </p>
                             <p>
-                                Whether you're a competitive gamer, a developer, or just someone who loves the feel and sound 
-                                of mechanical keyboards, Mechvibes delivers an authentic experience with zero compromises.
-                            </p>
-                            <p>
-                                Built with modern technologies and optimized for performance, Mechvibes continues to evolve 
-                                with community feedback and contributions.
+                                Whether you're a competitive gamer, a software developer, or someone who just loves the feel of quality mechanical switches, Mechvibes delivers an authentic experience without compromise.
                             </p>
                         </div>
+                        
                         <div class="about-stats">
-                            <div class="stat">
+                            <div class="stat-card">
                                 <div class="stat-number">10K+</div>
                                 <div class="stat-label">Downloads</div>
                             </div>
-                            <div class="stat">
+                            <div class="stat-card">
                                 <div class="stat-number">5+</div>
                                 <div class="stat-label">Years Active</div>
                             </div>
-                            <div class="stat">
+                            <div class="stat-card">
                                 <div class="stat-number">100%</div>
                                 <div class="stat-label">Open Source</div>
                             </div>
@@ -142,120 +144,56 @@
                 </div>
             </section>
 
-            <!-- Releases Section -->
-            <section id="releases" class="section">
-                <div class="section-container">
-                    <h2 class="section-title">Latest Releases</h2>
-                    <div id="releases-list" class="releases-list">
-                        <div class="loading">Loading releases...</div>
+            <!-- Releases -->
+            <section class="section-releases">
+                <div class="container">
+                    <h2 class="section-heading">Latest Release</h2>
+                    
+                    <div id="release-card" class="release-card">
+                        <div class="release-header">
+                            <div>
+                                <h3 id="releaseName">Loading...</h3>
+                                <p id="releaseDate" class="release-date"></p>
+                            </div>
+                            <a id="releaseLink" href="#" target="_blank" class="release-link">View on GitHub</a>
+                        </div>
+                        <div id="releaseBody" class="release-body"></div>
                     </div>
                 </div>
             </section>
 
-            <!-- Documentation Section -->
-            <section id="docs" class="section">
-                <div class="section-container">
-                    <h2 class="section-title">Documentation</h2>
-                    <div class="docs-grid">
-                        <div class="doc-card">
-                            <h3>Getting Started</h3>
-                            <p>Download and install Mechvibes in minutes. Step-by-step guide for first-time users.</p>
-                            <a href="https://github.com/omnizs38/mechvibes-cbc#readme" target="_blank" class="doc-link">
-                                Read Guide →
-                            </a>
-                        </div>
-                        
-                        <div class="doc-card">
-                            <h3>Configuration</h3>
-                            <p>Learn how to customize sound profiles and tweak settings to perfection.</p>
-                            <a href="https://github.com/omnizs38/mechvibes-cbc/wiki" target="_blank" class="doc-link">
-                                View Wiki →
-                            </a>
-                        </div>
-                        
-                        <div class="doc-card">
-                            <h3>Troubleshooting</h3>
-                            <p>Common issues and solutions. Having problems? Find answers here.</p>
-                            <a href="https://github.com/omnizs38/mechvibes-cbc/issues" target="_blank" class="doc-link">
-                                Issues →
-                            </a>
-                        </div>
-                        
-                        <div class="doc-card">
-                            <h3>Contributing</h3>
-                            <p>Want to help? Learn how to contribute to the project and make it even better.</p>
-                            <a href="https://github.com/omnizs38/mechvibes-cbc/blob/main/CONTRIBUTING.md" target="_blank" class="doc-link">
-                                Contribute →
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- FAQ Section -->
-            <section id="faq" class="section">
-                <div class="section-container">
-                    <h2 class="section-title">Frequently Asked Questions</h2>
-                    <div class="faq-list">
-                        <details class="faq-item">
-                            <summary>Is Mechvibes free?</summary>
-                            <p>Yes, Mechvibes is completely free and open source under the MPL-2.0 license.</p>
-                        </details>
-                        
-                        <details class="faq-item">
-                            <summary>Does it work with all keyboards?</summary>
-                            <p>Mechvibes works with any keyboard connected to Windows. The sounds play from your PC speakers or headphones.</p>
-                        </details>
-                        
-                        <details class="faq-item">
-                            <summary>Will it affect game performance?</summary>
-                            <p>No. Mechvibes is optimized for minimal resource usage and won't impact your gaming performance.</p>
-                        </details>
-                        
-                        <details class="faq-item">
-                            <summary>Can I customize the sounds?</summary>
-                            <p>Yes! Mechvibes offers extensive customization options for sound profiles, volume, and effects.</p>
-                        </details>
-                        
-                        <details class="faq-item">
-                            <summary>How do I report bugs?</summary>
-                            <p>Report issues on our GitHub Issues page. Include your system info and steps to reproduce the bug.</p>
-                        </details>
-                        
-                        <details class="faq-item">
-                            <summary>Can I contribute?</summary>
-                            <p>Absolutely! We welcome contributions. Check our CONTRIBUTING guide on GitHub for details.</p>
-                        </details>
+            <!-- Contact -->
+            <section id="contact" class="section-contact">
+                <div class="container">
+                    <h2 class="section-heading">Get in touch</h2>
+                    
+                    <div class="contact-links">
+                        <a href="https://github.com/omnizs38/mechvibes-cbc" target="_blank" class="contact-item">
+                            <span class="contact-icon">GitHub</span>
+                            <span class="contact-desc">View source code and contribute</span>
+                        </a>
+                        <a href="https://github.com/omnizs38/mechvibes-cbc/issues" target="_blank" class="contact-item">
+                            <span class="contact-icon">Issues</span>
+                            <span class="contact-desc">Report bugs or request features</span>
+                        </a>
+                        <a href="https://github.com/omnizs38/mechvibes-cbc/releases" target="_blank" class="contact-item">
+                            <span class="contact-icon">Releases</span>
+                            <span class="contact-desc">Download available versions</span>
+                        </a>
                     </div>
                 </div>
             </section>
 
             <!-- Footer -->
             <footer class="footer">
-                <div class="section-container">
+                <div class="container">
                     <div class="footer-content">
-                        <div class="footer-section">
-                            <h4>Mechvibes</h4>
-                            <p>Mechanical keyboard sound engine for Windows</p>
+                        <p>&copy; 2021-2026 Mechvibes. Licensed under MPL-2.0.</p>
+                        <div class="footer-links">
+                            <a href="https://github.com/omnizs38/mechvibes-cbc" target="_blank">GitHub</a>
+                            <a href="https://github.com/omnizs38/mechvibes-cbc#readme" target="_blank">Documentation</a>
+                            <a href="https://github.com/omnizs38/mechvibes-cbc/blob/main/LICENSE" target="_blank">License</a>
                         </div>
-                        
-                        <div class="footer-section">
-                            <h4>Links</h4>
-                            <ul>
-                                <li><a href="https://github.com/omnizs38/mechvibes-cbc" target="_blank">GitHub</a></li>
-                                <li><a href="https://github.com/omnizs38/mechvibes-cbc/releases" target="_blank">Downloads</a></li>
-                                <li><a href="https://github.com/omnizs38/mechvibes-cbc/issues" target="_blank">Issues</a></li>
-                            </ul>
-                        </div>
-                        
-                        <div class="footer-section">
-                            <h4>License</h4>
-                            <p>MPL-2.0 • <a href="https://github.com/omnizs38/mechvibes-cbc" target="_blank">Source</a></p>
-                        </div>
-                    </div>
-                    
-                    <div class="footer-bottom">
-                        <p>&copy; 2021-2026 Mechvibes. All rights reserved.</p>
                     </div>
                 </div>
             </footer>
