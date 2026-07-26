@@ -33,6 +33,29 @@ const { resolveLogSenderName } = require('./utils/log-sender');
 const { HotkeyTracker } = require('./services/hotkey-tracker');
 const { UpdateService } = require('./services/update-service');
 
+// Typed contract for the IPC channels the main process pushes to the app window.
+// `keydown`/`keyup` carry only what the renderer reads (see KeyInputEvent there).
+interface KeyboardInputPayload {
+  keycode: number;
+  capturedAtMs: number;
+}
+interface RendererChannels {
+  keydown: KeyboardInputPayload;
+  keyup: KeyboardInputPayload;
+  'ava-toggle': boolean;
+  'mechvibes-mute-status': boolean;
+  'system-mute-status': boolean;
+  'system-volume-update': number;
+  'input-hook-error': string;
+  'updater-state': import('./services/update-service').UpdateState;
+}
+// Known channels are payload-checked; the string fallback keeps this assignable
+// to consumers that take a generic sender (e.g. UpdateService.send).
+type SendToRenderer = {
+  <K extends keyof RendererChannels>(channel: K, value: RendererChannels[K]): void;
+  (channel: string, value?: unknown): void;
+};
+
 const SYSTRAY_ICON = path.join(__dirname, '/assets/system-tray-icon.png');
 const user_dir = app.getPath("userData");
 const custom_dir = path.join(user_dir, '/custom');
@@ -460,7 +483,7 @@ if (!gotTheLock) {
     let system_audio_error = false;
     let system_audio_check_in_flight = false;
 
-    const sendToMainWindow = (channel: string, value?: any) => {
+    const sendToMainWindow: SendToRenderer = (channel: string, value?: unknown) => {
       if (win && !win.isDestroyed() && !win.webContents.isDestroyed()) {
         win.webContents.send(channel, value);
       }
@@ -554,12 +577,12 @@ if (!gotTheLock) {
     // The renderer only needs the keycode and a capture timestamp; sending the
     // whole uiohook event would serialize ~8 unused fields across the IPC bridge
     // on every keystroke. Keep the per-key payload minimal.
-    iohook.on('keydown', (event: any) => {
+    iohook.on('keydown', (event: import('uiohook-napi').UiohookKeyboardEvent) => {
       if (hotkeys.handleKeydown(event)) return;
       sendToMainWindow('keydown', { keycode: event.keycode, capturedAtMs: Date.now() });
     });
 
-    iohook.on('keyup', (event: any) => {
+    iohook.on('keyup', (event: import('uiohook-napi').UiohookKeyboardEvent) => {
       hotkeys.handleKeyup(event);
       sendToMainWindow('keyup', { keycode: event.keycode, capturedAtMs: Date.now() });
     });
@@ -703,7 +726,9 @@ if (!gotTheLock) {
       }
     });
 
-    const isMainWindowEvent = (event: any) => Boolean(win && !win.isDestroyed() && event.sender === win.webContents);
+    // Accepts both IpcMainEvent and IpcMainInvokeEvent — only `sender` is read.
+    const isMainWindowEvent = (event: { sender: import('electron').WebContents }) =>
+      Boolean(win && !win.isDestroyed() && event.sender === win.webContents);
 
     ipcMain.on('updater-get-state', (event) => {
       event.returnValue = isMainWindowEvent(event) && updateService ? updateService.getState() : null;
