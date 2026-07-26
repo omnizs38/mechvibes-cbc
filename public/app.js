@@ -1,158 +1,184 @@
-"use strict";
 /**
- * Mechvibes Website - TypeScript 7
- * Modern minimalist design with GitHub releases integration
+ * Mechvibes Website
+ *
+ * The page ships with static fallback values in the markup and upgrades them
+ * once the GitHub API responds, so it stays correct and readable without JS,
+ * offline, or when the API rate-limits us.
  */
-const GITHUB_REPO = 'omnizs38/mechvibes-cbc';
-const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
-/**
- * Initialize on page load
- */
+import { GITHUB_URL, activityStatus, buildPlatforms, detectPlatform, loadProjectData, pickInstaller, platformLabel, relativeDate, } from './github.js';
+/** Longest release body we render inline before linking out to GitHub. */
+const RELEASE_BODY_LIMIT = 500;
 document.addEventListener('DOMContentLoaded', () => {
-    initTheme();
-    loadLatestRelease();
-    setupDownloadLink();
+    setupTheme();
+    setupRepoLinks();
+    setupFooterYear();
+    void hydrate();
 });
-/**
- * Initialize theme from localStorage
- */
-function initTheme() {
-    const themeToggle = document.getElementById('themeToggle');
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    if (savedTheme === 'dark') {
-        document.body.classList.add('dark-mode');
-        updateThemeIcon();
-    }
-    if (themeToggle) {
-        themeToggle.addEventListener('click', toggleTheme);
-    }
-}
-/**
- * Toggle between light and dark theme
- */
-function toggleTheme() {
-    const isDarkMode = document.body.classList.toggle('dark-mode');
-    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
-    updateThemeIcon();
-}
-/**
- * Update theme icon
- */
-function updateThemeIcon() {
-    const icon = document.querySelector('.theme-icon');
-    if (!icon)
+/* ===== THEME =====
+   The class itself is set by an inline script in <head> so the first paint is
+   already correct; this only wires up the toggle. */
+function setupTheme() {
+    const toggle = document.getElementById('themeToggle');
+    if (!toggle)
         return;
-    const isDarkMode = document.body.classList.contains('dark-mode');
-    icon.textContent = isDarkMode ? '☀️' : '🌙';
-}
-/**
- * Load latest release from GitHub API
- */
-async function loadLatestRelease() {
-    try {
-        const response = await fetch(GITHUB_API_URL, {
-            headers: {
-                'Accept': 'application/vnd.github.v3+json'
-            }
-        });
-        if (!response.ok) {
-            throw new Error('Failed to fetch release');
+    const root = document.documentElement;
+    toggle.setAttribute('aria-pressed', String(root.classList.contains('dark-mode')));
+    toggle.addEventListener('click', () => {
+        const isDark = root.classList.toggle('dark-mode');
+        try {
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
         }
-        const release = await response.json();
-        displayRelease(release);
+        catch {
+            // Private browsing: the toggle still works for this session.
+        }
+        toggle.setAttribute('aria-pressed', String(isDark));
+    });
+}
+/* ===== STATIC DERIVATIONS ===== */
+/**
+ * Point every GitHub link at the repository named in github.ts, so the slug
+ * lives in exactly one place instead of being repeated across the markup.
+ */
+function setupRepoLinks() {
+    const paths = {
+        repo: '',
+        issues: '/issues',
+        releases: '/releases',
+        readme: '#readme',
+        license: '/blob/main/LICENSE',
+    };
+    document
+        .querySelectorAll('[data-gh-link]')
+        .forEach((link) => {
+        const key = link.dataset.ghLink ?? '';
+        if (key in paths) {
+            link.href = `${GITHUB_URL}${paths[key]}`;
+        }
+    });
+}
+function setupFooterYear() {
+    setSlot('year', String(new Date().getFullYear()));
+}
+/* ===== LIVE DATA ===== */
+async function hydrate() {
+    let data;
+    try {
+        data = await loadProjectData();
     }
     catch (error) {
-        console.error('Error loading release:', error);
-        displayReleaseError();
+        console.error('Could not load project data from GitHub:', error);
+        showReleaseFallback();
+        return;
+    }
+    const { latest } = data;
+    setSlot('version', latest?.tag_name ?? null);
+    setSlot('license', data.license);
+    setSlot('status', activityStatus(data.pushedAt));
+    setSlot('release-count', data.releaseCount ? String(data.releaseCount) : null);
+    setSlot('updated', latest ? relativeDate(latest.published_at) : null);
+    const platforms = buildPlatforms(latest);
+    setSlot('platforms', platforms.length ? platforms.join(' · ') : null);
+    if (latest) {
+        renderRelease(latest);
+        setupDownload(latest);
+    }
+    else {
+        showReleaseFallback();
     }
 }
 /**
- * Display release information
+ * Fill a `data-gh` slot and drop its loading state. A null value leaves the
+ * markup's fallback text untouched.
  */
-function displayRelease(release) {
-    // Update version in hero
-    const versionEl = document.getElementById('latestVersion');
-    if (versionEl) {
-        versionEl.textContent = release.tag_name;
-    }
-    // Update release card
-    const releaseName = document.getElementById('releaseName');
-    const releaseDate = document.getElementById('releaseDate');
-    const releaseBody = document.getElementById('releaseBody');
-    const releaseLink = document.querySelector('#releaseLink');
-    if (!releaseName || !releaseDate || !releaseBody || !releaseLink)
+function setSlot(name, value) {
+    document
+        .querySelectorAll(`[data-gh="${name}"]`)
+        .forEach((el) => {
+        if (value)
+            el.textContent = value;
+        el.classList.remove('is-loading');
+    });
+}
+function renderRelease(release) {
+    const name = document.getElementById('releaseName');
+    const date = document.getElementById('releaseDate');
+    const body = document.getElementById('releaseBody');
+    const link = document.querySelector('#releaseLink');
+    if (!name || !date || !body || !link)
         return;
-    const date = new Date(release.published_at).toLocaleDateString('en-US', {
+    name.textContent = release.name || release.tag_name;
+    name.classList.remove('is-loading');
+    const published = new Date(release.published_at);
+    date.textContent = published.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
-        day: 'numeric'
+        day: 'numeric',
     });
-    let bodyText = release.body || 'No description available.';
-    if (bodyText.length > 500) {
-        bodyText = bodyText.substring(0, 500) + '...';
+    date.setAttribute('datetime', release.published_at);
+    let text = release.body?.trim() || 'No description available.';
+    if (text.length > RELEASE_BODY_LIMIT) {
+        text = `${text.slice(0, RELEASE_BODY_LIMIT).trimEnd()}...`;
     }
-    releaseName.textContent = release.name || release.tag_name;
-    releaseDate.textContent = date;
-    releaseBody.textContent = bodyText;
-    releaseLink.href = release.html_url;
-    releaseLink.target = '_blank';
-    releaseLink.rel = 'noopener noreferrer';
+    // textContent, never innerHTML: the body is authored by whoever can publish
+    // a release and is not trusted markup.
+    body.textContent = text;
+    link.href = release.html_url;
+    link.rel = 'noopener noreferrer';
+    document.getElementById('release-card')?.classList.remove('is-loading');
+}
+function showReleaseFallback() {
+    const name = document.getElementById('releaseName');
+    const body = document.getElementById('releaseBody');
+    if (name) {
+        name.textContent = 'Release information unavailable';
+        name.classList.remove('is-loading');
+    }
+    if (body) {
+        body.textContent =
+            'Could not reach the GitHub API. Use the link above to see the latest release.';
+    }
+    document.getElementById('release-card')?.classList.remove('is-loading');
+    document
+        .querySelectorAll('[data-gh]')
+        .forEach((el) => el.classList.remove('is-loading'));
 }
 /**
- * Display error message
+ * Send visitors straight to the installer for their OS. The button is a real
+ * link with a release-page fallback in the markup, so it works before this
+ * runs and when no matching asset exists.
  */
-function displayReleaseError() {
-    const releaseCard = document.getElementById('release-card');
-    if (!releaseCard)
+function setupDownload(release) {
+    const button = document.querySelector('#downloadBtn');
+    if (!button)
         return;
-    releaseCard.innerHTML = `
-    <p style="color: var(--color-text-secondary); text-align: center;">
-      Could not load release information. 
-      <a href="https://github.com/${GITHUB_REPO}/releases" target="_blank" style="color: var(--color-text); font-weight: 600;">
-        View on GitHub →
-      </a>
-    </p>
-  `;
+    const platform = detectPlatform();
+    const asset = pickInstaller(release, platform);
+    button.href = asset ? asset.browser_download_url : release.html_url;
+    const label = button.querySelector('.btn-label');
+    const note = button.querySelector('.btn-note');
+    if (label) {
+        label.textContent = asset
+            ? `Download ${platformLabel(platform)}`.trim()
+            : 'View latest release';
+    }
+    if (note) {
+        note.textContent = asset
+            ? `${release.tag_name} · ${formatSize(asset.size)}`
+            : release.tag_name;
+    }
 }
-/**
- * Setup download button to link to latest release
- */
-function setupDownloadLink() {
-    const downloadBtn = document.getElementById('downloadBtn');
-    if (!downloadBtn)
-        return;
-    downloadBtn.addEventListener('click', async (e) => {
-        e.preventDefault();
-        try {
-            const response = await fetch(GITHUB_API_URL, {
-                headers: {
-                    'Accept': 'application/vnd.github.v3+json'
-                }
-            });
-            if (!response.ok) {
-                throw new Error('Failed to fetch release');
-            }
-            const release = await response.json();
-            window.open(release.html_url, '_blank');
-        }
-        catch (error) {
-            console.error('Error:', error);
-            // Fallback to releases page
-            window.open(`https://github.com/${GITHUB_REPO}/releases`, '_blank');
-        }
-    });
+function formatSize(bytes) {
+    return `${Math.round(bytes / 1024 / 1024)} MB`;
 }
-/**
- * Smooth scroll for nav links
- */
-document.querySelectorAll('a[href^="#"]').forEach((link) => {
-    link.addEventListener('click', (e) => {
-        const href = link.getAttribute('href');
-        if (href === '#') {
-            e.preventDefault();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
+/* ===== NAVIGATION ===== */
+document
+    .querySelectorAll('a[href="#"]')
+    .forEach((link) => {
+    link.addEventListener('click', (event) => {
+        event.preventDefault();
+        window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
     });
 });
-// Log initialization
-console.log('%cMechvibes Website - TypeScript 7', 'color: #000; font-weight: bold; font-size: 14px;');
+function prefersReducedMotion() {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}

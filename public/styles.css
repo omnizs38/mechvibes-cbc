@@ -1,8 +1,54 @@
+/* ===== FONT =====
+   Self-hosted rather than loaded from Google Fonts: the stylesheet link there
+   is render-blocking and costs two cross-origin round trips (googleapis for
+   the CSS, gstatic for the file) before first paint. One variable file covers
+   every weight the page uses. */
+@font-face {
+    font-family: 'Inter';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('./fonts/inter.woff2') format('woff2');
+}
+
 /* ===== CSS RESET & BASE ===== */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+}
+
+/* The icon sprite is markup, not content. */
+.icon-sprite {
+    display: none;
+}
+
+/* Icons inherit text colour and sit on the text baseline everywhere. */
+svg use {
+    pointer-events: none;
+}
+
+.skip-link {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    z-index: 1100;
+    padding: 0.75rem 1.25rem;
+    background: var(--color-text);
+    color: var(--color-bg);
+    border-radius: 0 0 6px 0;
+    font-weight: 600;
+}
+
+.skip-link:focus {
+    left: 0;
+    color: var(--color-bg);
+}
+
+:where(a, button):focus-visible {
+    outline: 2px solid var(--color-text);
+    outline-offset: 3px;
+    border-radius: 4px;
 }
 
 :root {
@@ -43,7 +89,7 @@ body {
     transition: background-color var(--transition), color var(--transition);
 }
 
-body.dark-mode {
+.dark-mode {
     --color-text: #ffffff;
     --color-text-secondary: #999999;
     --color-border: #333333;
@@ -103,12 +149,14 @@ a:hover {
     width: 100%;
     z-index: 1000;
     background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
+    /* No backdrop-filter: at 0.95 alpha only 5% of the backdrop shows through,
+       so the blur was invisible while still forcing a composited layer and a
+       re-blur of the full-width strip on every scroll frame. */
     border-bottom: 1px solid var(--color-border);
-    transition: all var(--transition);
+    transition: background-color var(--transition), border-color var(--transition);
 }
 
-body.dark-mode .navbar {
+.dark-mode .navbar {
     background: rgba(10, 10, 10, 0.95);
 }
 
@@ -123,11 +171,20 @@ body.dark-mode .navbar {
 }
 
 .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     font-size: 1.25rem;
     font-weight: 700;
     letter-spacing: -0.5px;
     color: var(--color-text);
     cursor: pointer;
+}
+
+.logo-mark {
+    width: 22px;
+    height: 22px;
+    flex: none;
 }
 
 .nav-links {
@@ -143,19 +200,29 @@ body.dark-mode .navbar {
     position: relative;
 }
 
+/* Transparent 44px hit area. Padding cannot be used here because ::after is
+   anchored to the link's bottom edge and would be pushed away from the text. */
+.nav-link::before {
+    content: '';
+    position: absolute;
+    inset: -13px -8px;
+}
+
 .nav-link::after {
     content: '';
     position: absolute;
     bottom: -4px;
     left: 0;
-    width: 0;
+    width: 100%;
     height: 2px;
     background: var(--color-text);
-    transition: width var(--transition);
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform var(--transition);
 }
 
 .nav-link:hover::after {
-    width: 100%;
+    transform: scaleX(1);
 }
 
 .theme-toggle {
@@ -163,7 +230,11 @@ body.dark-mode .navbar {
     border: none;
     cursor: pointer;
     font-size: 1.25rem;
-    padding: 0.5rem;
+    /* 44px minimum touch target. */
+    width: 44px;
+    height: 44px;
+    flex: none;
+    padding: 0;
     transition: transform var(--transition);
     display: flex;
     align-items: center;
@@ -174,19 +245,72 @@ body.dark-mode .navbar {
     transform: scale(1.1) rotate(15deg);
 }
 
+.theme-toggle .icon {
+    width: 20px;
+    height: 20px;
+    color: var(--color-text);
+}
+
+.theme-toggle .icon-sun {
+    display: none;
+}
+
+.dark-mode .theme-toggle .icon-moon {
+    display: none;
+}
+
+.dark-mode .theme-toggle .icon-sun {
+    display: block;
+}
+
 /* ===== BUTTONS ===== */
 .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 0.625rem;
+    min-height: 44px;
     padding: 0.875rem 1.75rem;
     border: 1px solid var(--color-border);
     border-radius: 6px;
     font-weight: 600;
     font-size: 0.95rem;
     cursor: pointer;
-    transition: all var(--transition);
+    /* Explicit property list: `all` makes the browser watch every animatable
+       property, including layout-affecting ones we never intend to animate. */
+    transition:
+        background-color var(--transition),
+        border-color var(--transition),
+        color var(--transition),
+        transform var(--transition),
+        box-shadow var(--transition);
     text-decoration: none;
+}
+
+.btn-icon {
+    width: 18px;
+    height: 18px;
+    flex: none;
+}
+
+.btn-text {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    line-height: 1.25;
+}
+
+/* Version and size sit under the label without changing the button's height
+   when they arrive, so filling them in causes no layout shift. */
+.btn-note {
+    font-size: 0.7rem;
+    font-weight: 500;
+    opacity: 0.7;
+    min-height: 0.9rem;
+}
+
+.btn-note:empty {
+    display: none;
 }
 
 .btn-primary {
@@ -214,22 +338,22 @@ body.dark-mode .navbar {
     transform: translateY(-2px);
 }
 
-body.dark-mode .btn-primary {
+.dark-mode .btn-primary {
     background: var(--color-white);
     color: var(--color-black);
     border-color: var(--color-white);
 }
 
-body.dark-mode .btn-primary:hover {
+.dark-mode .btn-primary:hover {
     background: var(--color-gray-100);
     border-color: var(--color-gray-100);
 }
 
-body.dark-mode .btn-secondary {
+.dark-mode .btn-secondary {
     border-color: var(--color-gray-800);
 }
 
-body.dark-mode .btn-secondary:hover {
+.dark-mode .btn-secondary:hover {
     background: var(--color-gray-900);
     border-color: var(--color-gray-700);
 }
@@ -307,6 +431,14 @@ body.dark-mode .btn-secondary:hover {
     font-size: 1.15rem;
     font-weight: 700;
     color: var(--color-text);
+    min-height: 1.6em;
+}
+
+/* .hero-meta is centred, so a version string of a different length slides its
+   two siblings sideways. Reserving the width keeps the row still. */
+[data-gh='version'] {
+    display: inline-block;
+    min-width: 5ch;
 }
 
 /* ===== SECTIONS ===== */
@@ -326,7 +458,9 @@ body.dark-mode .btn-secondary:hover {
 
 .features-list {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    /* min() keeps the track from ever demanding more than the container, so
+       the layout is safe on its own rather than relying on a later override. */
+    grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
     gap: 4rem 3.5rem;
 }
 
@@ -343,10 +477,21 @@ body.dark-mode .btn-secondary:hover {
     justify-content: center;
     background: var(--color-gray-50);
     border-radius: 12px;
-    font-size: 2.5rem;
+    color: var(--color-text);
+    transition: background var(--transition), color var(--transition);
 }
 
-body.dark-mode .feature-icon {
+.feature-icon svg {
+    width: 30px;
+    height: 30px;
+}
+
+.feature-item:hover .feature-icon {
+    background: var(--color-text);
+    color: var(--color-bg);
+}
+
+.dark-mode .feature-icon {
     background: var(--color-gray-900);
 }
 
@@ -399,7 +544,10 @@ body.dark-mode .feature-icon {
     border-radius: 8px;
     text-align: center;
     border: 1px solid var(--color-border);
-    transition: all var(--transition);
+    transition:
+        border-color var(--transition),
+        transform var(--transition),
+        background-color var(--transition);
 }
 
 .stat-card:hover {
@@ -407,7 +555,7 @@ body.dark-mode .feature-icon {
     transform: translateY(-2px);
 }
 
-body.dark-mode .stat-card {
+.dark-mode .stat-card {
     background: var(--color-gray-900);
 }
 
@@ -440,14 +588,17 @@ body.dark-mode .stat-card {
     border: 1px solid var(--color-border);
     max-width: 800px;
     margin: 0 auto;
-    transition: all var(--transition);
+    /* Floor the card so the API-failure path, which renders a single line,
+       does not collapse it and drag the sections below upward. */
+    min-height: 20rem;
+    transition: border-color var(--transition), background-color var(--transition);
 }
 
 .release-card:hover {
     border-color: var(--color-text);
 }
 
-body.dark-mode .release-card {
+.dark-mode .release-card {
     background: var(--color-gray-900);
 }
 
@@ -459,15 +610,26 @@ body.dark-mode .release-card {
     gap: 2rem;
 }
 
+/* Release titles and notes come from the API and can contain long unbroken
+   tokens (URLs, commit SHAs). Let them wrap, and reserve their line boxes so
+   arriving text does not push the card. */
+.release-header > div {
+    min-width: 0;
+}
+
 .release-header h3 {
     margin-bottom: 0.75rem;
     font-size: 1.6rem;
+    min-height: 1.2em;
+    overflow-wrap: anywhere;
 }
 
 .release-date {
     font-size: 0.9rem;
     color: var(--color-text-secondary);
     font-weight: 500;
+    min-height: 1.6em;
+    display: block;
 }
 
 .release-link {
@@ -476,7 +638,10 @@ body.dark-mode .release-card {
     padding: 0.625rem 1.25rem;
     border: 1px solid var(--color-border);
     border-radius: 6px;
-    transition: all var(--transition);
+    transition:
+        background-color var(--transition),
+        border-color var(--transition),
+        color var(--transition);
     white-space: nowrap;
 }
 
@@ -485,7 +650,7 @@ body.dark-mode .release-card {
     border-color: var(--color-text);
 }
 
-body.dark-mode .release-link:hover {
+.dark-mode .release-link:hover {
     background: var(--color-gray-800);
 }
 
@@ -493,6 +658,42 @@ body.dark-mode .release-link:hover {
     font-size: 1rem;
     color: var(--color-text-secondary);
     line-height: 1.8;
+    /* Reserve roughly the height of a truncated release body so the card does
+       not grow when the notes arrive. */
+    min-height: 9rem;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+
+/* ===== LOADING STATE =====
+   Values that arrive from the GitHub API render as a muted placeholder block
+   first, so the layout is already the right size when they land. */
+.is-loading {
+    color: transparent;
+    background: var(--color-gray-100);
+    border-radius: 4px;
+    animation: pulse 1.4s ease-in-out infinite;
+    user-select: none;
+}
+
+.dark-mode .is-loading {
+    background: var(--color-gray-800);
+}
+
+.release-card.is-loading {
+    color: inherit;
+    background: var(--color-gray-50);
+    animation: none;
+}
+
+.dark-mode .release-card.is-loading {
+    background: var(--color-gray-900);
+}
+
+@keyframes pulse {
+    50% {
+        opacity: 0.45;
+    }
 }
 
 /* ===== CONTACT ===== */
@@ -504,7 +705,7 @@ body.dark-mode .release-link:hover {
 
 .contact-links {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
     gap: 2.5rem;
     max-width: 1000px;
     margin: 0 auto;
@@ -518,11 +719,15 @@ body.dark-mode .release-link:hover {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    transition: all var(--transition);
+    transition:
+        border-color var(--transition),
+        transform var(--transition),
+        box-shadow var(--transition),
+        background-color var(--transition);
     text-align: center;
 }
 
-body.dark-mode .contact-item {
+.dark-mode .contact-item {
     background: var(--color-gray-900);
 }
 
@@ -530,6 +735,18 @@ body.dark-mode .contact-item {
     border-color: var(--color-text);
     transform: translateY(-4px);
     box-shadow: 0 12px 24px rgba(0, 0, 0, 0.08);
+}
+
+.contact-svg {
+    width: 30px;
+    height: 30px;
+    margin: 0 auto 0.5rem;
+    color: var(--color-text);
+    transition: transform var(--transition);
+}
+
+.contact-item:hover .contact-svg {
+    transform: translateY(-2px) scale(1.05);
 }
 
 .contact-icon {
@@ -551,7 +768,7 @@ body.dark-mode .contact-item {
     padding: 4rem 0;
 }
 
-body.dark-mode .footer {
+.dark-mode .footer {
     background: var(--color-gray-900);
 }
 
@@ -571,18 +788,79 @@ body.dark-mode .footer {
 
 .footer-links {
     display: flex;
-    gap: 2.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 1.5rem 2.5rem;
 }
 
 .footer-links a {
     font-size: 0.9rem;
     color: var(--color-text-secondary);
     font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
     transition: color var(--transition);
 }
 
 .footer-links a:hover {
     color: var(--color-text);
+}
+
+/* ===== RENDERING PERFORMANCE =====
+   Skip layout and paint for sections that are still off-screen. The `auto`
+   keyword makes the browser remember each section's real height after it has
+   been rendered once, so the scrollbar stays stable. */
+.section-features {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 900px;
+}
+
+.section-about {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 800px;
+}
+
+.section-releases {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 700px;
+}
+
+.section-contact {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 560px;
+}
+
+.footer {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 160px;
+}
+
+/* ===== REDUCED MOTION =====
+   Honour the OS setting: no transforms, no pulsing skeletons, no smooth
+   scroll. Transitions collapse rather than disappear so focus and hover
+   states still read as deliberate. */
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+
+    .btn:hover,
+    .stat-card:hover,
+    .contact-item:hover,
+    .theme-toggle:hover,
+    .contact-item:hover .contact-svg {
+        transform: none;
+    }
 }
 
 /* ===== RESPONSIVE ===== */
@@ -676,14 +954,27 @@ body.dark-mode .footer {
     
     .nav-links {
         gap: 1rem;
+        flex-shrink: 0;
     }
-    
+
+    /* 12px was below a readable minimum; 13px still leaves ~40px of slack in
+       a 360px navbar. */
     .nav-link {
-        font-size: 0.75rem;
+        font-size: 0.8125rem;
     }
-    
+
     .logo {
         font-size: 1rem;
+        flex-shrink: 1;
+        min-width: 0;
+    }
+
+    /* If the nav ever grows, the wordmark truncates instead of the row
+       overflowing into a horizontal scrollbar. */
+    .logo span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
     
     .hero {
@@ -717,6 +1008,9 @@ body.dark-mode .footer {
         gap: 1.5rem;
         padding-top: 1.5rem;
         flex-direction: column;
+        /* Once the axis flips, justify-content governs the vertical axis and
+           the items would otherwise stretch to full width. */
+        align-items: center;
     }
     
     .section-heading {
