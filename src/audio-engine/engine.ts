@@ -122,6 +122,16 @@ export class WebAudioEngine {
       return Promise.resolve(false);
     }
     this.metrics.playRequests += 1;
+
+    // A suspended context freezes currentTime. Scheduling against that stale
+    // clock produces no sound, and every queued voice then fires at once the
+    // moment the context resumes. Drop the event and get the context back.
+    if (!this.graph.isRunning) {
+      this.metrics.droppedEvents += 1;
+      this.graph.requestResume();
+      return Promise.resolve(false);
+    }
+
     const eventKey = `${event.type}:${event.keycode}`;
     const layer = this.manifest.events[eventKey];
     if (!layer) {

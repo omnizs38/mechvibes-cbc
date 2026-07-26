@@ -28,6 +28,8 @@ export class AudioGraph {
   private compressorNode: DynamicsCompressorNode | null;
   private masterGain: number;
   private packGain: number;
+  private closing: boolean;
+  private resuming: Promise<void> | null;
 
   constructor({
     contextFactory = () => new AudioContext({ latencyHint: 'interactive' }),
@@ -38,6 +40,8 @@ export class AudioGraph {
     this.compressorNode = null;
     this.masterGain = 1;
     this.packGain = 1;
+    this.closing = false;
+    this.resuming = null;
   }
 
   /**
@@ -57,8 +61,31 @@ export class AudioGraph {
     this.compressorNode.release.value = 0.08;
     this.masterGainNode.connect(this.compressorNode);
     this.compressorNode.connect(context.destination);
+    // Windows suspends the context when the output device idles or changes.
+    // Nothing else would ever bring it back, and a suspended context freezes
+    // currentTime, so recovery has to be automatic.
+    if (typeof context.addEventListener === 'function') {
+      context.addEventListener('statechange', () => this.handleStateChange());
+    }
     this.applyGain();
     return context;
+  }
+
+  private handleStateChange(): void {
+    if (this.closing || !this.context) return;
+    if (this.context.state === 'suspended') this.requestResume();
+  }
+
+  /** True only when the context is actually rendering audio. */
+  get isRunning(): boolean {
+    return this.context !== null && this.context.state === 'running';
+  }
+
+  /** Fire-and-forget resume for callers on the hot path (key events). */
+  requestResume(): void {
+    void this.resume().catch(() => {
+      // Nothing useful to do here; the next state change retries.
+    });
   }
 
   /** The node voices connect their per-voice gain to. */
@@ -73,7 +100,15 @@ export class AudioGraph {
   async resume(): Promise<void> {
     this.ensureCreated();
     const context = this.context as SinkCapableAudioContext;
-    if (context.state === 'suspended') await context.resume();
+    if (context.state !== 'suspended') return;
+    // Collapse concurrent attempts: a burst of key events must not stack up
+    // resume() calls against the same context.
+    if (!this.resuming) {
+      this.resuming = context.resume().finally(() => {
+        this.resuming = null;
+      });
+    }
+    await this.resuming;
   }
 
   /** Sets the pack-level gain (from the manifest) and re-applies. */
@@ -115,7 +150,10 @@ export class AudioGraph {
   }
 
   async close(): Promise<void> {
+    this.closing = true;
     if (this.context && this.context.state !== 'closed') await this.context.close();
+    this.closing = false;
+    this.resuming = null;
     this.context = null;
     this.masterGainNode = null;
     this.compressorNode = null;

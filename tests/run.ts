@@ -873,6 +873,119 @@ test('schedules a buffered v3 sound through one Web Audio graph', async () => {
   await engine.dispose();
 });
 
+test('drops key events while the audio context is suspended instead of queueing them', async () => {
+  // Regression: an AudioContext freezes `currentTime` while suspended, so every
+  // voice scheduled during that window got `start()` at the same stale time.
+  // Nothing was audible, and the moment the context resumed the whole backlog
+  // fired at once. Events must be dropped, and the context resumed, instead.
+  const starts: unknown[][] = [];
+  const parameter = () => ({
+    value: 0,
+    cancelScheduledValues() {},
+    setValueAtTime() {},
+    linearRampToValueAtTime() {},
+  });
+  const node = () => ({ connect() {}, disconnect() {} });
+  let resumeCalls = 0;
+  const context = {
+    currentTime: 1,
+    state: 'running',
+    destination: {},
+    onstatechange: null as null | (() => void),
+    createGain: () => ({ ...node(), gain: parameter() }),
+    createDynamicsCompressor: () => ({
+      ...node(),
+      threshold: parameter(),
+      knee: parameter(),
+      ratio: parameter(),
+      attack: parameter(),
+      release: parameter(),
+    }),
+    createBufferSource: () => ({
+      ...node(),
+      playbackRate: { value: 1 },
+      stop() {},
+      start: (...arguments_: unknown[]) => starts.push(arguments_),
+      onended: null,
+    }),
+    async decodeAudioData() {
+      return { length: 4800, numberOfChannels: 1, duration: 0.1 };
+    },
+    addEventListener(type: string, listener: () => void) {
+      if (type === 'statechange') this.onstatechange = listener;
+    },
+    removeEventListener() {},
+    // The device is still asleep: resume() is accepted but the context does
+    // not come back until the OS hands the endpoint over, which is what makes
+    // the suspended window last long enough to matter.
+    async resume() {
+      resumeCalls += 1;
+    },
+    async close() {
+      this.state = 'closed';
+    },
+  };
+  const engine = new WebAudioEngine({
+    contextFactory: () => context,
+    readSourceImpl: async () => null,
+    fetchImpl: async () => ({
+      ok: true,
+      headers: { get: () => null },
+      arrayBuffer: async () => new ArrayBuffer(4),
+    }),
+    random: () => 0.5,
+    now: () => 1,
+  });
+  await engine.loadManifest({
+    id: 'test',
+    name: 'Test',
+    maxVoices: 64,
+    cacheBudgetBytes: 1024 * 1024,
+    preload: 'all',
+    gain: 1,
+    events: {
+      'keydown:30': {
+        samples: [{ source: 'a.wav', gain: 1, pitch: 0 }],
+        mode: 'round-robin',
+        gain: 1,
+        pitchVariationCents: 0,
+        priority: 5,
+        envelope: { attackMs: 0, releaseMs: 10 },
+      },
+    },
+  });
+
+  assert.equal(await engine.play({ type: 'keydown', keycode: 30 }), true);
+  assert.equal(starts.length, 1, 'plays normally while running');
+
+  // The output device goes to sleep: the context suspends and its clock stops.
+  context.state = 'suspended';
+  const frozenTime = context.currentTime;
+  resumeCalls = 0;
+
+  for (let index = 0; index < 5; index += 1) {
+    assert.equal(
+      await engine.play({ type: 'keydown', keycode: 30 }),
+      false,
+      'keypresses while suspended are reported as not played',
+    );
+  }
+
+  assert.equal(context.currentTime, frozenTime, 'the context clock really is frozen');
+  assert.equal(starts.length, 1, 'no voice is queued against the frozen clock');
+  assert.equal(engine.getStats().droppedEvents, 5, 'the dropped events are counted');
+  assert.ok(resumeCalls > 0, 'a resume is requested so playback recovers');
+
+  // Once resumed, playback works again with no backlog to flush.
+  context.state = 'running';
+  context.currentTime = 9;
+  assert.equal(await engine.play({ type: 'keydown', keycode: 30 }), true);
+  assert.equal(starts.length, 2);
+  assert.deepEqual((starts[1] as number[])[0], 9, 'schedules against the live clock');
+
+  await engine.dispose();
+});
+
 test('isolates malformed soundpack folders during discovery', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mechvibes-registry-'));
   const official = path.join(root, 'official');
