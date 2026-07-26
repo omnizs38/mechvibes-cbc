@@ -219,7 +219,6 @@ function createWindow(show = false) {
     ...({ name: 'app' } as Record<string, unknown>),
     width: 400,
     height: 600,
-    ...({ webSecurity: false } as Record<string, unknown>),
     // resizable: false,
     // fullscreenable: false,
     webPreferences: {
@@ -296,7 +295,6 @@ function openInstallWindow(packId: string){
     width: 300,
     height: 200,
     useContentSize: false,
-    ...({ webSecurity: false } as Record<string, unknown>),
     // resizable: false,
     // fullscreenable: false,
     webPreferences: {
@@ -343,7 +341,6 @@ function createDebugWindow(){
     width: 350,
     height: 500,
     useContentSize: false,
-    ...({ webSecurity: false } as Record<string, unknown>),
     // resizable: false,
     // fullscreenable: false,
     webPreferences: {
