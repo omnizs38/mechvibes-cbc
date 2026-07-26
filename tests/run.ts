@@ -714,6 +714,85 @@ test('audio graph applies master*pack gain and switches output device', async ()
   assert.equal(graph.contextState, 'not-created');
 });
 
+test('audio graph keeps an inaudible signal running so the output never idles', async () => {
+  // Regression: after ~30s of digital silence Chromium swaps the real output
+  // sink for a timer-driven one. The audio clock then advances at ~0.655x real
+  // time while state still reads "running", so voices scheduled at
+  // context.currentTime land seconds in the past and surface late and bunched.
+  // Measured on Windows; a single sound restores the clock, so the fix is to
+  // never be silent.
+  const parameter = () => ({
+    value: 0,
+    cancelScheduledValues() {},
+    setValueAtTime() {},
+    linearRampToValueAtTime() {},
+  });
+  const destination = { id: 'destination' };
+  const connections: unknown[] = [];
+  let started = 0;
+  let stopped = 0;
+  let channelData: Float32Array | null = null;
+
+  const context = {
+    currentTime: 0,
+    state: 'running',
+    sampleRate: 48000,
+    destination,
+    createGain: () => ({ connect() {}, gain: parameter() }),
+    createDynamicsCompressor: () => ({
+      connect() {},
+      threshold: parameter(),
+      knee: parameter(),
+      ratio: parameter(),
+      attack: parameter(),
+      release: parameter(),
+    }),
+    createBuffer: (_channels: number, length: number) => {
+      channelData = new Float32Array(length);
+      return { getChannelData: () => channelData as Float32Array };
+    },
+    createBufferSource: () => ({
+      buffer: null as unknown,
+      loop: false,
+      connect: (target: unknown) => connections.push(target),
+      disconnect() {},
+      start: () => {
+        started += 1;
+      },
+      stop: () => {
+        stopped += 1;
+      },
+    }),
+    async close() {
+      this.state = 'closed';
+    },
+    async resume() {},
+  };
+
+  const graph = new AudioGraph({ contextFactory: () => context });
+  graph.ensureCreated();
+
+  assert.equal(started, 1, 'a keep-alive source is started with the graph');
+  assert.ok(
+    connections.includes(destination),
+    'keep-alive goes straight to the destination, so muting cannot idle the stream',
+  );
+
+  const data = channelData as unknown as Float32Array;
+  assert.ok(data && data.length === 48000, 'one second of buffer is generated');
+  assert.ok(
+    data.some((sample: number) => sample !== 0),
+    'the signal is non-zero, otherwise it still reads as digital silence',
+  );
+  assert.ok(
+    data.every((sample: number) => Math.abs(sample) <= 1e-5),
+    'and stays at dither level, far below anything audible',
+  );
+
+  await graph.close();
+  assert.equal(stopped, 1, 'the keep-alive is stopped with the context');
+});
+
 test('voice scheduler reserves one voice and starts the buffer window', () => {
   const starts: unknown[][] = [];
   const parameter = () => ({
