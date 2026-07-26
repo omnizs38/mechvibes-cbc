@@ -2,7 +2,7 @@
 
 import { keycodesFill, keycodesRemap } from '../libs/keycodes';
 import { expandNumberTemplateVariants, validateSoundpackConfig } from '../libs/soundpacks/validation';
-import type { AudioManifest, ManifestLayer, ManifestSample } from './web-audio-engine';
+import type { AudioManifest, ManifestLayer, ManifestSample } from './manifest';
 import type { SoundpackMetadata } from '../libs/soundpacks/registry';
 
 export type GetFile = (packPath: string, reference: string) => string;
@@ -185,10 +185,11 @@ export function adaptV3Layer(
   );
 }
 
-export function adaptV3(
+function adaptModern(
   config: AnyConfig,
   metadata: SoundpackMetadata,
-  getFile: GetFile = defaultGetFile,
+  getFile: GetFile,
+  version: 3 | 4,
 ): AudioManifest {
   const layers: Record<string, EventLayers> = {};
   const standardKeys = keycodesFill(config['keys'] as Record<string, unknown>);
@@ -201,7 +202,7 @@ export function adaptV3(
   return {
     id: metadata.pack_id,
     name: config['name'],
-    version: 3,
+    version,
     author: config['author'],
     license: config['license'],
     sampleRate: config['sampleRate'],
@@ -214,6 +215,27 @@ export function adaptV3(
   };
 }
 
+export function adaptV3(
+  config: AnyConfig,
+  metadata: SoundpackMetadata,
+  getFile: GetFile = defaultGetFile,
+): AudioManifest {
+  return adaptModern(config, metadata, getFile, 3);
+}
+
+/**
+ * v4 is the canonical native config: the v3 schema, plus per-sample
+ * `offsetSeconds` / `durationSeconds` windows (carried through by
+ * {@link adaptV3Layer}). It maps 1:1 to the audio manifest.
+ */
+export function adaptV4(
+  config: AnyConfig,
+  metadata: SoundpackMetadata,
+  getFile: GetFile = defaultGetFile,
+): AudioManifest {
+  return adaptModern(config, metadata, getFile, 4);
+}
+
 export function createAudioManifest(
   config: unknown,
   metadata: SoundpackMetadata,
@@ -222,5 +244,6 @@ export function createAudioManifest(
   const validated = validateSoundpackConfig(config) as AnyConfig;
   if (validated['version'] === 1) return adaptV1(validated, metadata, getFile);
   if (validated['version'] === 2) return adaptV2(validated, metadata, getFile);
+  if (validated['version'] === 4) return adaptV4(validated, metadata, getFile);
   return adaptV3(validated, metadata, getFile);
 }

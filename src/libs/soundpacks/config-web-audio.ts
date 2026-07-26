@@ -1,8 +1,7 @@
 'use strict';
 
-import { createAudioManifest } from '../../audio-engine/manifest-adapter';
-import { WebAudioEngine } from '../../audio-engine/web-audio-engine';
-import type { AudioManifest, PlaybackEvent } from '../../audio-engine/web-audio-engine';
+import { createAudioManifest, WebAudioEngine } from '../../audio-engine';
+import type { AudioManifest, PlaybackEvent } from '../../audio-engine';
 import { ClearSoundpackCache } from './file-manager';
 import type { ValidatedSoundpackConfig } from './validation';
 import type { SoundpackMetadata } from './registry';

@@ -2,7 +2,7 @@
 
 import path from 'path';
 
-const SUPPORTED_VERSIONS: ReadonlySet<number> = new Set([1, 2, 3]);
+const SUPPORTED_VERSIONS: ReadonlySet<number> = new Set([1, 2, 3, 4]);
 export const SUPPORTED_AUDIO_EXTENSIONS: ReadonlySet<string> = new Set([
   '.aac',
   '.flac',
@@ -31,6 +31,9 @@ export interface ValidatedSample {
   gain: number;
   pitch: number;
   weight: number;
+  /** Optional playback window (v4). Absent means play the whole file. */
+  offsetSeconds?: number;
+  durationSeconds?: number;
   [key: string]: unknown;
 }
 
@@ -48,7 +51,8 @@ export type ValidatedEventLayers = Partial<Record<SoundpackEventType, ValidatedL
 
 export interface ValidatedV3Config {
   name: string;
-  version: 3;
+  /** 3 or 4 — the v4 config is the v3 schema plus per-sample offset/duration. */
+  version: 3 | 4;
   author: string;
   license: string;
   sampleRate: number | null;
@@ -188,13 +192,32 @@ function validateV3Sample(sample: unknown, field: string): ValidatedSample {
   if (!isPlainObject(sample)) {
     throw new SoundpackValidationError(`${field} must be a file path or sample object.`);
   }
-  return {
+  const normalized: ValidatedSample = {
     ...sample,
     file: normalizeSoundReference(sample['file'], `${field}.file`),
     gain: validateFiniteRange(sample['gain'], `${field}.gain`, 0, 2, 1),
     pitch: validateFiniteRange(sample['pitch'], `${field}.pitch`, -1200, 1200, 0),
     weight: validateFiniteRange(sample['weight'], `${field}.weight`, 0.01, 100, 1),
   };
+  // Optional per-sample playback window (v4 sprite support). Validated whenever
+  // present so a malformed window is rejected rather than silently passed on.
+  if (sample['offsetSeconds'] !== undefined) {
+    normalized.offsetSeconds = validateFiniteRange(
+      sample['offsetSeconds'],
+      `${field}.offsetSeconds`,
+      0,
+      3600,
+    );
+  }
+  if (sample['durationSeconds'] !== undefined) {
+    normalized.durationSeconds = validateFiniteRange(
+      sample['durationSeconds'],
+      `${field}.durationSeconds`,
+      0.001,
+      3600,
+    );
+  }
+  return normalized;
 }
 
 function validateV3Layer(layer: unknown, field: string): ValidatedLayer {
@@ -241,7 +264,11 @@ function validateV3Layer(layer: unknown, field: string): ValidatedLayer {
   };
 }
 
-function validateV3Config(config: AnyRecord, name: string): ValidatedV3Config {
+function validateModernConfig(
+  config: AnyRecord,
+  name: string,
+  version: 3 | 4,
+): ValidatedV3Config {
   const engine = config['engine'] === undefined ? {} : config['engine'];
   const defaults = config['defaults'] === undefined ? {} : config['defaults'];
   const keys = config['keys'] === undefined ? {} : config['keys'];
@@ -301,7 +328,7 @@ function validateV3Config(config: AnyRecord, name: string): ValidatedV3Config {
   return {
     ...config,
     name,
-    version: 3,
+    version,
     author: config['author'] === undefined ? '' : requireNonEmptyString(config['author'], 'author'),
     license:
       config['license'] === undefined ? '' : requireNonEmptyString(config['license'], 'license'),
@@ -342,8 +369,8 @@ export function validateSoundpackConfig(config: unknown): ValidatedSoundpackConf
   if (name.length > MAX_NAME_LENGTH) {
     throw new SoundpackValidationError(`name must not exceed ${MAX_NAME_LENGTH} characters.`);
   }
-  if (version === 3) {
-    return validateV3Config(config, name);
+  if (version === 3 || version === 4) {
+    return validateModernConfig(config, name, version);
   }
 
   if (config['key_define_type'] !== 'single' && config['key_define_type'] !== 'multi') {
@@ -415,7 +442,7 @@ export function expandNumberTemplateVariants(reference: string): string[] {
 export function listReferencedSoundFiles(config: unknown): string[] {
   const validated = validateSoundpackConfig(config);
   const references = new Set<string>();
-  if (validated.version === 3) {
+  if (validated.version === 3 || validated.version === 4) {
     const v3 = validated as ValidatedV3Config;
     const addLayer = (layer?: ValidatedLayer): void => {
       if (!layer) return;

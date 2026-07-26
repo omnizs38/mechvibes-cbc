@@ -49,6 +49,7 @@ const CONFIG_FACTORIES: ConfigFactories = {
   1: () => require('./config-web-audio') as SoundpackConfigConstructor,
   2: () => require('./config-web-audio') as SoundpackConfigConstructor,
   3: () => require('./config-v3') as SoundpackConfigConstructor,
+  4: () => require('./config-web-audio') as SoundpackConfigConstructor,
 };
 
 export function listSoundpackCandidates(rootDirectory: string): string[] {
