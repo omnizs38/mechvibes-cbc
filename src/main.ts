@@ -561,14 +561,17 @@ if (!gotTheLock) {
       },
     });
 
+    // The renderer only needs the keycode and a capture timestamp; sending the
+    // whole uiohook event would serialize ~8 unused fields across the IPC bridge
+    // on every keystroke. Keep the per-key payload minimal.
     iohook.on('keydown', (event: any) => {
       if (hotkeys.handleKeydown(event)) return;
-      sendToMainWindow('keydown', { ...event, capturedAtMs: Date.now() });
+      sendToMainWindow('keydown', { keycode: event.keycode, capturedAtMs: Date.now() });
     });
 
     iohook.on('keyup', (event: any) => {
       hotkeys.handleKeyup(event);
-      sendToMainWindow('keyup', { ...event, capturedAtMs: Date.now() });
+      sendToMainWindow('keyup', { keycode: event.keycode, capturedAtMs: Date.now() });
     });
 
     function createTrayIcon(){
