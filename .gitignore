@@ -6,6 +6,7 @@ gist
 .DS_Store
 .tsbuildinfo
 coverage
+mechvibes-diagnostics.txt
 .env
 .env.*
 !.env.example
