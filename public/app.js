@@ -1,13 +1,18 @@
 /**
- * Mechvibes Website
+ * Mechvibes-cbc Website
  *
  * The page ships with static fallback values in the markup and upgrades them
  * once the GitHub API responds, so it stays correct and readable without JS,
  * offline, or when the API rate-limits us.
  */
+import { renderMarkdown, truncateMarkdown } from './markdown.js';
 import { GITHUB_URL, activityStatus, buildPlatforms, detectPlatform, loadProjectData, pickInstaller, platformLabel, relativeDate, } from './github.js';
-/** Longest release body we render inline before linking out to GitHub. */
-const RELEASE_BODY_LIMIT = 500;
+/**
+ * Longest release body we render inline before linking out to GitHub. Real
+ * release notes are a heading plus a handful of bullets; this fits that
+ * without letting a changelog-sized body take over the page.
+ */
+const RELEASE_BODY_LIMIT = 1400;
 document.addEventListener('DOMContentLoaded', () => {
     setupTheme();
     setupRepoLinks();
@@ -115,16 +120,31 @@ function renderRelease(release) {
         day: 'numeric',
     });
     date.setAttribute('datetime', release.published_at);
-    let text = release.body?.trim() || 'No description available.';
-    if (text.length > RELEASE_BODY_LIMIT) {
-        text = `${text.slice(0, RELEASE_BODY_LIMIT).trimEnd()}...`;
-    }
-    // textContent, never innerHTML: the body is authored by whoever can publish
-    // a release and is not trusted markup.
-    body.textContent = text;
+    renderReleaseBody(body, release.body?.trim() ?? '');
     link.href = release.html_url;
     link.rel = 'noopener noreferrer';
     document.getElementById('release-card')?.classList.remove('is-loading');
+}
+/**
+ * Release notes are Markdown, so render them as such - but the body is
+ * authored by whoever can publish a release and is not trusted. renderMarkdown
+ * builds DOM nodes and never parses an HTML string, so nothing in the body can
+ * become markup; see markdown.ts.
+ */
+function renderReleaseBody(body, source) {
+    body.replaceChildren();
+    if (!source) {
+        body.textContent = 'No description available.';
+        return;
+    }
+    const { text, truncated } = truncateMarkdown(source, RELEASE_BODY_LIMIT);
+    body.appendChild(renderMarkdown(text));
+    if (truncated) {
+        const note = document.createElement('p');
+        note.className = 'release-truncated';
+        note.textContent = 'Notes truncated - open the release on GitHub to read the rest.';
+        body.appendChild(note);
+    }
 }
 function showReleaseFallback() {
     const name = document.getElementById('releaseName');

@@ -11,5 +11,5 @@
     "sourceMap": false,
     "types": []
   },
-  "include": ["app.ts", "github.ts"]
+  "include": ["app.ts", "github.ts", "markdown.ts"]
 }

@@ -1,5 +1,5 @@
 /**
- * Mechvibes Website - GitHub data layer
+ * Mechvibes-cbc Website - GitHub data layer
  *
  * Every fact the site states about the project is read from here, so nothing
  * has to be kept in sync by hand. One constant identifies the repository;
