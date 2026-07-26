@@ -348,6 +348,85 @@ test('resolves the electron-log sender label without crashing on undefined windo
   assert.equal(resolveLogSenderName({ sender: { browserWindowOptions: { name: 'main' } } }), 'main');
 });
 
+test('posts remote logs and records non-200 responses without recursing', async () => {
+  // The custom electron-log v5 remote transport imports `electron` and does real
+  // HTTP, so stub `electron` and drive it against a throwaway server. Guards the
+  // v4->v5 rewrite: payload shape, circular/error-safe serialization, response
+  // status handling, and — critically — that logging a failure does not fan back
+  // into the remote transport and recurse.
+  const nodeModule = require('module');
+  const originalLoad = nodeModule._load;
+  nodeModule._load = (request: string, ...rest: unknown[]) =>
+    request === 'electron'
+      ? { app: { getVersion: () => '2.4.2' } }
+      : originalLoad.call(nodeModule, request, ...rest);
+
+  const http = require('http');
+  try {
+    delete require.cache[require.resolve('../src/libs/electron-log/transports/remote')];
+    const remoteTransportFactory = require('../src/libs/electron-log/transports/remote');
+
+    const writes: Array<{ transport: string; level: string; data: unknown[] }> = [];
+    const sink = (transport: string) => (message: { level: string; data: unknown[] }) =>
+      writes.push({ transport, level: message.level, data: message.data });
+    const electronLog = {
+      variables: { sender: 'main' } as Record<string, unknown> & { sender?: string },
+      transports: { file: sink('file'), console: sink('console'), ipc: sink('ipc') },
+    };
+
+    let body: string | null = null;
+    const server = http.createServer((request: any, response: any) => {
+      let chunks = '';
+      request.on('data', (chunk: string) => (chunks += chunk));
+      request.on('end', () => {
+        body = chunks;
+        response.statusCode = 500;
+        response.end('nope');
+      });
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const { port } = server.address();
+
+    const transport = remoteTransportFactory(electronLog, `http://127.0.0.1:${port}/debug/ipc/`);
+    assert.equal(transport.requestOptions.method, 'LOG'); // preserved from v4
+    assert.equal(transport.level, false); // disabled until debugging is enabled
+
+    transport.level = 'silly';
+    transport.client.identifier = 'test-id';
+    // Node's server parser rejects the custom LOG method; POST lets the harness
+    // read the wire payload while the default LOG is asserted above.
+    transport.requestOptions.method = 'POST';
+
+    const circular: Record<string, unknown> = { a: 1 };
+    circular.self = circular;
+    transport({
+      data: ['hello', circular, new Error('boom')],
+      level: 'info',
+      date: new Date(),
+      variables: { sender: 'renderer' },
+    });
+
+    await new Promise<void>((resolve) => setTimeout(resolve, 300));
+
+    const parsed = JSON.parse(String(body));
+    assert.equal(parsed.client.name, 'Mechvibes');
+    assert.equal(parsed.client.identifier, 'test-id');
+    const serialized = JSON.stringify(parsed.data);
+    assert.ok(serialized.includes('[Circular]'), 'circular references are made safe');
+    assert.ok(serialized.includes('boom'), 'errors keep their message');
+
+    const warnTargets = writes.filter((w) => w.level === 'warn').map((w) => w.transport).sort();
+    assert.deepEqual(warnTargets, ['console', 'file', 'ipc']);
+    assert.ok(writes.length <= 6, 'a failed send does not recurse into the remote transport');
+    assert.equal(electronLog.variables.sender, 'main'); // sender is restored
+
+    server.close();
+  } finally {
+    nodeModule._load = originalLoad;
+    delete require.cache[require.resolve('../src/libs/electron-log/transports/remote')];
+  }
+});
+
 test('selects v3 samples without immediate repeats', () => {
   const selector = new SampleSelector(() => 0);
   const samples = ['a', 'b', 'c'];

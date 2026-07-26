@@ -15,8 +15,10 @@ const { getVolume, getMute } = require('easy-volume');
 const path = require('path');
 const os = require("os");
 const fs = require('fs-extra');
-// NOTE: Do not update electron-log, as we have a custom transport override which may not be compatible with newer versions.
-const log = require("electron-log");
+// electron-log v5. The custom remote transport lives in
+// ./libs/electron-log/transports/remote and is written against the v5 transport
+// contract (plain function + level/transforms), so upgrades are safe again.
+const log = require("electron-log/main");
 // electron-store v9+ ships as an ES module whose class is the default export.
 // Under Node's require(ESM) the call returns the module namespace, so unwrap
 // `.default` (older CJS builds returned the class directly, hence the fallback).
@@ -132,11 +134,6 @@ function enableDebugSafely() {
 // TODO: you know what, just move everything inside this tbh.
 log.transports.remote = require("./libs/electron-log/transports/remote")(log, debug.remoteUrl);
 
-// fix so we can detect transport type from within transport hook (see log.hooks.push(...))
-for (const transportName in log.transports) {
-  log.transports[transportName].transportName = transportName;
-}
-
 // parse debugging options
 const debugConfigFile = path.join(user_dir, "/remote-debug.json");
 if (fs.existsSync(debugConfigFile)) {
@@ -163,26 +160,19 @@ if (fs.existsSync(debugConfigFile)) {
 //           $XDG_CONFIG_HOME/Mechvibes/logs/mechvibes.log
 log.transports.file.fileName = "mechvibes.log";
 log.transports.file.level = "info";
-log.transports.file.resolvePath = (variables: any) => {
-  return path.join(variables.libraryDefaultDir, variables.fileName);
+// v5 renamed resolvePath -> resolvePathFn and the default-directory variable
+// libraryDefaultDir -> electronDefaultDir (app logs path).
+log.transports.file.resolvePathFn = (variables: any) => {
+  return path.join(variables.electronDefaultDir ?? variables.userData, variables.fileName);
 }
 log.variables.sender = "main";
-// console.log(log.transports.console.format); // uncomment to see default formats in console
-// console.log(log.transports.file.format); // uncomment to see default formats in console
-log.transports.console.format = "%c{h}:{i}:{s}.{ms}%c {sender} › {text}"
+// `{sender}` interpolates from log.variables in v5 format templates.
+log.transports.console.format = "{h}:{i}:{s}.{ms} {sender} › {text}"
 log.transports.file.format = "[{y}-{m}-{d} {h}:{i}:{s}.{ms}] [{level}]({sender}) {text}"
 
-const LogTransportMap = { error: 'red', warn: 'yellow', info: 'cyan', debug: 'magenta', silly: 'green', default: 'unset' };
-log.hooks.push((msg: any, {transportName}: any) => {
-  if (transportName === 'console') {
-    // apply color, only to console transport
-    return {
-      ...msg,
-      data: [`color: ${LogTransportMap[msg.level as keyof typeof LogTransportMap]}`, 'color: unset', ...msg.data]
-    };
-  }
-  return msg;
-});
+// v5 colors the console transport natively via colorMap (replacing the old
+// per-message %c hook, which relied on removed internals).
+log.transports.console.colorMap = { error: 'red', warn: 'yellow', info: 'cyan', debug: 'magenta', silly: 'green' };
 
 // const custom_dir = path.join(user_dir, "/custom");
 
