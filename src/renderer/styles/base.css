@@ -3,6 +3,17 @@
    Shared by every renderer window. Replaces milligram + legacy app.css.
    ========================================================================== */
 
+/* Inter is bundled (self-hosted) so it works offline and under the renderer
+   CSP, which forbids remote font sources. One variable file covers every
+   weight the UI uses. */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('./fonts/inter.woff2') format('woff2');
+}
+
 :root {
   color-scheme: light;
 
@@ -37,8 +48,8 @@
   --shadow: 0 2px 4px rgba(16, 24, 40, 0.06), 0 8px 24px rgba(16, 24, 40, 0.08);
   --focus-ring: #1a73e8;
 
-  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text', 'Segoe UI',
-    Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI Variable Text',
+    'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: ui-monospace, 'Cascadia Mono', 'SF Mono', Menlo, Consolas, monospace;
 }
 
