@@ -206,7 +206,6 @@ function createWindow(show = false) {
     ...({ name: 'app' } as Record<string, unknown>),
     width: 400,
     height: 600,
-    ...({ backgroundThrottling: false } as Record<string, unknown>),
     ...({ webSecurity: false } as Record<string, unknown>),
     // resizable: false,
     // fullscreenable: false,
@@ -214,6 +213,12 @@ function createWindow(show = false) {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: false,
       nodeIntegration: true,
+      // Mechvibes lives in the tray, so its renderer is almost always
+      // backgrounded. Without this, Chromium throttles the renderer's timers
+      // and tasks, delaying the IPC keydown -> engine.play() path that turns a
+      // keystroke into sound. backgroundThrottling is a webPreferences option;
+      // spread at the top level (as it was) Electron silently ignores it.
+      backgroundThrottling: false,
     },
     show: false,
   });
