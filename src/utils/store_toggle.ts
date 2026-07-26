@@ -32,23 +32,27 @@ let cachedStore: StoreLike | null = null;
 function getStore(): StoreLike {
   if (cachedStore) return cachedStore;
 
-  /* eslint-disable @typescript-eslint/no-var-requires */
   const electron = require('electron') as { app?: unknown };
+
+  // electron-store v9+ is an ES module whose class is the default export.
+  // require()/remote.require() returns the module namespace under Node's
+  // require(ESM), so unwrap `.default` (with a fallback for older CJS builds).
+  const unwrap = (mod: unknown): StoreConstructor =>
+    ((mod as { default?: StoreConstructor }).default ?? mod) as StoreConstructor;
 
   let StoreCtor: StoreConstructor;
   if (electron.app) {
-    StoreCtor = require('electron-store') as StoreConstructor;
+    StoreCtor = unwrap(require('electron-store'));
   } else {
     const remote = require('@electron/remote') as RemoteModule;
     const path = require('path') as typeof import('node:path');
     const absolute = path.join(remote.app.getAppPath(), 'node_modules', 'electron-store');
     try {
-      StoreCtor = remote.require(absolute) as StoreConstructor;
+      StoreCtor = unwrap(remote.require(absolute));
     } catch {
-      StoreCtor = remote.require('electron-store') as StoreConstructor;
+      StoreCtor = unwrap(remote.require('electron-store'));
     }
   }
-  /* eslint-enable @typescript-eslint/no-var-requires */
 
   cachedStore = new StoreCtor();
   return cachedStore;

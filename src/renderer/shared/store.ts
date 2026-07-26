@@ -31,7 +31,11 @@ function loadStoreConstructor(): StoreConstructor {
 
   for (const id of candidates) {
     try {
-      return remote.require(id) as StoreConstructor;
+      // electron-store v9+ is an ES module whose class is the default export;
+      // remote.require() returns the module namespace under require(ESM), so
+      // unwrap `.default` (falling back to the module for older CJS builds).
+      const mod = remote.require(id) as { default?: StoreConstructor };
+      return (mod.default ?? mod) as StoreConstructor;
     } catch (error) {
       failures.push(id + ': ' + (error as Error).message);
     }
