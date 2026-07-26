@@ -44,7 +44,7 @@ export interface ReplacementFileSystem {
   removeSync(target: string): void;
 }
 
-/** Minimal response surface shared by `fetch` and `electron-fetch`. */
+/** Minimal WHATWG `fetch` response surface consumed by {@link readResponseBuffer}. */
 export interface SizedResponse {
   headers?: { get(name: string): string | null } | undefined;
   body?: { getReader?: () => ReadableStreamDefaultReader<Uint8Array> } | null | undefined;
