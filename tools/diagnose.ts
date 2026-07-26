@@ -22,10 +22,9 @@
  * The report is printed and written to mechvibes-diagnostics.txt.
  */
 
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 
 interface AsarArchive {
   kind: 'asar';
@@ -61,13 +60,13 @@ interface HtmlReference {
 }
 
 const WINDOWS: string[] = ['app', 'install', 'debug', 'editor'];
-const repoRoot: string = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const repoRoot: string = path.resolve(path.dirname(__filename), '..');
 
 const report: string[] = [];
 let failures: number = 0;
 let warnings: number = 0;
 
-const line = (text: string = ''): void => report.push(text);
+const line = (text: string = ''): void => { report.push(text); };
 const section = (title: string): void => {
   line('');
   line('='.repeat(72));
