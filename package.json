@@ -10,9 +10,9 @@
     "build:main": "tsc -p tsconfig.json",
     "dev:renderer": "vite",
     "build:renderer": "vite build",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.renderer.json",
-    "lint": "echo \"lint: source is TypeScript now, static checks run via npm run typecheck\"",
-    "lint:fix": "npm run lint -- --fix",
+    "build:web": "tsc -p public/tsconfig.json",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.renderer.json && tsc --noEmit -p public/tsconfig.json",
+    "lint": "npm run typecheck",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,html}\" \"tools/**/*.ts\" \"tests/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,html}\" \"tools/**/*.ts\" \"tests/**/*.ts\"",
     "diagnose": "tsc tools/diagnose.ts --outDir dist --module commonjs && node dist/tools/diagnose.js",
@@ -25,7 +25,7 @@
     "check": "npm run build:main && node tools/check-syntax.js",
     "test": "npm run build:main && node tests/run.js",
     "benchmark:audio": "npm run build:main && node tools/audio-benchmark.js",
-    "verify": "npm run check && npm test && npm run typecheck && npm run lint"
+    "verify": "npm run check && npm test && npm run typecheck"
   },
   "engines": {
     "node": ">=22"
@@ -114,11 +114,10 @@
     "adm-zip": "^0.6.0",
     "easy-volume": "^1.2.0",
     "electron-fetch": "^1.9.1",
-    "electron-log": "^5.4.4",
+    "electron-log": "^4.4.8",
     "electron-store": "^11.0.2",
     "electron-updater": "^6.8.9",
     "fs-extra": "^11.4.0",
-    "glob": "^13.0.6",
     "mime-types": "^3.0.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
@@ -127,18 +126,13 @@
   "devDependencies": {
     "@types/adm-zip": "^0.5.7",
     "@types/fs-extra": "^11.0.4",
-    "@types/glob": "^8.1.0",
     "@types/mime-types": "^3.0.1",
     "@types/node": "^26.1.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@typescript-eslint/eslint-plugin": "^7.18.0",
-    "@typescript-eslint/parser": "^7.18.0",
     "@vitejs/plugin-react": "^6.0.4",
     "electron": "^43.2.0",
     "electron-builder": "^26.15.3",
-    "eslint": "^8.57.1",
-    "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.9.6",
     "typescript": "^7.0.2",
     "vite": "^8.1.5"
