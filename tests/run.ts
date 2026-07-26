@@ -21,15 +21,17 @@ const { VoicePool } = require('../src/audio-engine/voice-pool');
 const { WebAudioEngine, centsToPlaybackRate } = require('../src/audio-engine');
 const { SoundpackManager } = require('../src/libs/soundpacks/pack-manager');
 const { keycodesRemap } = require('../src/libs/keycodes');
-const { resolveSoundReference } = require('../src/libs/soundpacks/reference-resolver');
 const { discoverSoundpacks, verifySoundpackChecksums } = require('../src/libs/soundpacks/registry');
 const {
-  expandNumberTemplate,
-  expandNumberTemplateVariants,
   listReferencedSoundFiles,
   normalizeSoundReference,
   validateSoundpackConfig,
 } = require('../src/libs/soundpacks/validation');
+const {
+  buildV4Config,
+  parseV4Config,
+  hasSound: editorHasSound,
+} = require('../src/libs/soundpacks/editor-config');
 const {
   commitDirectoryReplacement,
   enforceDownloadSize,
@@ -51,17 +53,6 @@ interface TestCase {
 const tests: TestCase[] = [];
 function test(name: string, callback: () => unknown): void {
   tests.push({ name, callback });
-}
-
-function validV1(overrides = {}) {
-  return {
-    name: 'Test pack',
-    key_define_type: 'single',
-    includes_numpad: false,
-    sound: 'sound.ogg',
-    defines: { 1: [0, 100] },
-    ...overrides,
-  };
 }
 
 function validV3(overrides = {}) {
@@ -168,24 +159,63 @@ class FakeUpdater extends EventEmitter {
   }
 }
 
-test('validates bundled v1 and v2 shapes', () => {
-  assert.equal(validateSoundpackConfig(validV1()).version, 1);
-  const v2 = validateSoundpackConfig({
-    name: 'V2',
-    version: 2,
-    key_define_type: 'multi',
-    sound: 'press/key_{0-4}.mp3',
-    soundup: 'release/key.mp3',
-    defines: { 1: 'press/key_1.mp3', '1-up': 'release/key.mp3' },
-  });
-  assert.equal(v2.version, 2);
-  const metadata = { pack_id: 'default-test', abs_path: '/pack' };
-  const getFile = (_packPath: string, file: string) => `file:///pack/${file}`;
-  const v1Manifest = createAudioManifest(validateSoundpackConfig(validV1()), metadata, { getFile });
-  assert.equal(v1Manifest.events['keydown:1'].samples[0].durationSeconds, 0.1);
-  const v2Manifest = createAudioManifest(v2, metadata, { getFile });
-  assert.equal(v2Manifest.events['keydown:1'].samples.length, 1);
-  assert.equal(v2Manifest.events['keyup:1'].samples.length, 1);
+test('adapts a v4 sprite config into paired keydown and keyup windows', () => {
+  // The shape the bundled sprite packs are stored in: one shared file, per-key
+  // keydown windows, and (where present) a keyup release window.
+  const config = validateSoundpackConfig(
+    validV4({
+      defaults: {},
+      keys: {
+        30: {
+          keydown: { samples: [{ file: 'sound.ogg', offsetSeconds: 2.926, durationSeconds: 0.125 }] },
+          keyup: {
+            samples: [{ file: 'sound.ogg', offsetSeconds: 3.051, durationSeconds: 0.077 }],
+            priority: 4,
+          },
+        },
+      },
+    }),
+  );
+  assert.equal(config.version, 4);
+  const manifest = createAudioManifest(
+    config,
+    { pack_id: 'sprite', abs_path: '/pack' },
+    { getFile: (_packPath: string, file: string) => `file:///pack/${file}` },
+  );
+  assert.equal(manifest.events['keydown:30'].samples[0].durationSeconds, 0.125);
+  assert.equal(manifest.events['keyup:30'].samples[0].offsetSeconds, 3.051);
+  assert.equal(manifest.events['keyup:30'].priority, 4);
+});
+
+test('createAudioManifest skips re-validation for an already-validated config', () => {
+  // The load path validates once at discovery and passes validate:false here.
+  // A too-low sampleRate is rejected by the validator but trusted when skipped.
+  const trusted = {
+    name: 'Trusted',
+    version: 4,
+    sampleRate: 999,
+    engine: { maxVoices: 64, preload: 'all', cacheBudgetMb: 192, gain: 1 },
+    defaults: {},
+    keys: {
+      30: {
+        keydown: {
+          samples: [{ file: 'a.wav', gain: 1, pitch: 0, weight: 1 }],
+          mode: 'round-robin',
+          gain: 1,
+          pitchVariationCents: 0,
+          priority: 5,
+          envelope: { attackMs: 0, releaseMs: 12 },
+        },
+      },
+    },
+    checksums: {},
+  };
+  const metadata = { pack_id: 'trusted', abs_path: '/pack' };
+  const getFile = (_packPath: string, file: string) => `data:audio/mock,${file}`;
+  assert.throws(() => createAudioManifest(trusted, metadata, { getFile }), /sampleRate/);
+  const manifest = createAudioManifest(trusted, metadata, { getFile, validate: false });
+  assert.equal(manifest.sampleRate, 999);
+  assert.equal(manifest.events['keydown:30'].samples[0].source, 'data:audio/mock,a.wav');
 });
 
 test('remaps Windows key aliases without emitting empty definitions', () => {
@@ -243,6 +273,64 @@ test('validates the native v4 config and preserves per-sample windows', () => {
   );
 });
 
+test('editor builds an engine-loadable v4 sprite config and round-trips it', () => {
+  const draft = { name: 'My Pack', mode: 'sprite' as const, sound: 'sound.ogg' };
+  const defines = { 30: [2926, 125] as [number, number], 57: [0, 0] as [number, number], 44: null };
+  const config = buildV4Config(draft.name, draft.mode, draft.sound, defines);
+  // Editor output must survive the engine's own validator.
+  const validated = validateSoundpackConfig(config);
+  assert.equal(validated.version, 4);
+  // Keys without sound (57 zero window, 44 null) are dropped; 30 is kept.
+  assert.deepEqual(Object.keys(config.keys), ['30']);
+  assert.equal(config.keys['30'].keydown.samples[0].offsetSeconds, 2.926);
+  assert.equal(config.keys['30'].keydown.samples[0].durationSeconds, 0.125);
+  // Parsing it back reproduces the millisecond window and infers sprite mode.
+  const parsed = parseV4Config(config);
+  assert.equal(parsed.mode, 'sprite');
+  assert.equal(parsed.name, 'My Pack');
+  assert.equal(parsed.sound, 'sound.ogg');
+  assert.deepEqual(parsed.defines['30'], [2926, 125]);
+});
+
+test('editor builds and round-trips a v4 per-file config', () => {
+  const config = buildV4Config('Files', 'files', 'unused.ogg', { 30: 'a.wav', 44: '' });
+  assert.deepEqual(Object.keys(config.keys), ['30']);
+  assert.equal(config.keys['30'].keydown.samples[0].file, 'a.wav');
+  assert.equal(config.keys['30'].keydown.samples[0].offsetSeconds, undefined);
+  validateSoundpackConfig(config);
+  const parsed = parseV4Config(config);
+  assert.equal(parsed.mode, 'files');
+  assert.equal(parsed.defines['30'], 'a.wav');
+});
+
+test('editor treats empty and metadata-only configs as an empty sprite draft', () => {
+  const empty = parseV4Config({});
+  assert.equal(empty.mode, 'sprite');
+  assert.deepEqual(empty.defines, {});
+  assert.equal(editorHasSound(null), false);
+  assert.equal(editorHasSound([0, 0]), false);
+  assert.equal(editorHasSound([1, 2]), true);
+  assert.equal(editorHasSound(''), false);
+  assert.equal(editorHasSound('a.wav'), true);
+});
+
+test('validates idempotently when optional metadata is omitted', () => {
+  // The load path validates a config, then re-validates the result inside
+  // createAudioManifest, so a config without author/license/sampleRate must
+  // survive a second pass (its defaults are '' / '' / null).
+  const once = validateSoundpackConfig({
+    name: 'No metadata',
+    version: 4,
+    engine: { maxVoices: 64, preload: 'all', cacheBudgetMb: 192, gain: 1 },
+    defaults: {},
+    keys: { 30: { keydown: { samples: ['a.wav'] } } },
+    checksums: {},
+  });
+  assert.equal(once.author, '');
+  assert.equal(once.sampleRate, null);
+  assert.doesNotThrow(() => validateSoundpackConfig(once));
+});
+
 test('verifies optional v3 SHA-256 sample integrity', () => {
   const config = {
     checksums: {
@@ -264,62 +352,39 @@ test('verifies optional v3 SHA-256 sample integrity', () => {
 });
 
 test('rejects unsafe or malformed soundpack configuration', () => {
-  assert.throws(() => validateSoundpackConfig(validV1({ sound: '../outside.wav' })), /unsafe/);
-  assert.throws(() => validateSoundpackConfig(validV1({ version: 99 })), /Unsupported/);
-  assert.throws(() => validateSoundpackConfig(validV1({ defines: { key: [0, 1] } })), /invalid key/);
-  assert.throws(() => validateSoundpackConfig(validV1({ defines: { 1: [0, 0] } })), /invalid start or duration/);
+  assert.throws(
+    () => validateSoundpackConfig(validV3({ defaults: { keydown: { samples: ['../outside.wav'] } } })),
+    /unsafe/,
+  );
+  assert.throws(() => validateSoundpackConfig(validV4({ version: 99 })), /Unsupported/);
+  assert.throws(() => validateSoundpackConfig(validV4({ version: 1 })), /Unsupported/);
+  assert.throws(() => validateSoundpackConfig(validV3({ keys: { key: { keydown: { samples: ['a.wav'] } } } })), /invalid/);
+  assert.throws(
+    () =>
+      validateSoundpackConfig(
+        validV4({ keys: { 30: { keydown: { samples: [{ file: 'a.wav', durationSeconds: 0 }] } } } }),
+      ),
+    /durationSeconds/,
+  );
   assert.throws(() => normalizeSoundReference('C:/secret.wav'), /relative/);
+  // Number templates were a v1/v2 feature; brace filenames are now rejected.
+  assert.throws(() => normalizeSoundReference('key_{0-4}.mp3'), /unsafe on Windows/);
   assert.throws(() => normalizeSoundReference('CON.wav'), /unsafe on Windows/);
   assert.throws(() => normalizeSoundReference('folder/./sound.wav'), /unsafe on Windows/);
   assert.equal(normalizeSoundReference('./sound.wav'), 'sound.wav');
 });
 
-test('expands bounded number templates deterministically', () => {
-  assert.equal(expandNumberTemplate('press/key_{0-4}.mp3', () => 0), 'press/key_0.mp3');
-  assert.equal(expandNumberTemplate('press/key_{0-4}.mp3', () => 0.9999), 'press/key_4.mp3');
-  assert.deepEqual(expandNumberTemplateVariants('press/key_{1-3}.mp3'), [
-    'press/key_1.mp3',
-    'press/key_2.mp3',
-    'press/key_3.mp3',
-  ]);
-  const references = listReferencedSoundFiles({
-    name: 'V2',
-    version: 2,
-    key_define_type: 'multi',
-    sound: 'press/key_{0-1}.mp3',
-    soundup: 'release/key.mp3',
-    defines: { 1: 'press/special.mp3' },
-  });
-  assert.deepEqual(new Set(references), new Set([
-    'press/key_0.mp3',
-    'press/key_1.mp3',
-    'release/key.mp3',
-    'press/special.mp3',
-  ]));
-  assert.deepEqual(listReferencedSoundFiles({
-    name: 'Legacy multi',
-    key_define_type: 'multi',
-    sound: 'unused.ogg',
-    defines: { 1: 'key.wav' },
-  }), ['key.wav']);
-});
-
-test('falls back when an explicit v2 sound file is missing', () => {
-  const loaded: any[] = [];
-  const value = resolveSoundReference(
-    'press/missing.mp3',
-    'press/generic_{0-1}.mp3',
-    (reference: string) => {
-      loaded.push(reference);
-      if (reference === 'press/missing.mp3') {
-        throw new Error('missing');
-      }
-      return reference;
-    },
-    () => 0,
+test('lists every referenced sound file for a v4 config', () => {
+  const references = listReferencedSoundFiles(
+    validV4({
+      defaults: { keydown: { samples: ['press/a.wav', 'press/b.wav'] }, keyup: { samples: ['release/a.flac'] } },
+      keys: { 30: { keydown: { samples: [{ file: 'press/special.mp3' }] } } },
+    }),
   );
-  assert.equal(value, 'press/generic_0.mp3');
-  assert.deepEqual(loaded, ['press/missing.mp3', 'press/generic_0.mp3']);
+  assert.deepEqual(
+    new Set(references),
+    new Set(['press/a.wav', 'press/b.wav', 'release/a.flac', 'press/special.mp3']),
+  );
 });
 
 test('calculates finite and clamped audio gain', () => {
@@ -814,7 +879,7 @@ test('isolates malformed soundpack folders during discovery', () => {
   const custom = path.join(root, 'custom');
   fs.mkdirSync(path.join(official, 'good'), { recursive: true });
   fs.mkdirSync(path.join(custom, 'bad'), { recursive: true });
-  fs.writeFileSync(path.join(official, 'good', 'config.json'), JSON.stringify(validV1()));
+  fs.writeFileSync(path.join(official, 'good', 'config.json'), JSON.stringify(validV4()));
   fs.writeFileSync(path.join(custom, 'bad', 'config.json'), '{broken');
 
   class StubConfig {
@@ -825,7 +890,7 @@ test('isolates malformed soundpack folders during discovery', () => {
   const result = discoverSoundpacks({
     officialDirectory: official,
     customDirectory: custom,
-    factories: { 1: () => StubConfig, 2: () => StubConfig },
+    factories: { 3: () => StubConfig, 4: () => StubConfig },
   });
   assert.equal(result.packs.length, 1);
   assert.equal(result.errors.length, 1);

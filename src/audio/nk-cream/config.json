@@ -1,127 +1,1040 @@
 {
-  "id": "custom-sound-pack-1599402588730",
   "name": "NK Cream (original by Ryan)",
-  "key_define_type": "multi",
-  "includes_numpad": false,
-  "sound": "sound.ogg",
-  "defines": {
-    "1": "q.wav",
-    "2": "w.wav",
-    "3": "e.wav",
-    "4": "e.wav",
-    "5": "r.wav",
-    "6": "t.wav",
-    "7": "y.wav",
-    "8": "u.wav",
-    "9": "i.wav",
-    "10": "o.wav",
-    "11": "p.wav",
-    "12": "[.wav",
-    "13": "].wav",
-    "14": "backspace.wav",
-    "15": "tab.wav",
-    "16": "q.wav",
-    "17": "w.wav",
-    "18": "e.wav",
-    "19": "r.wav",
-    "20": "t.wav",
-    "21": "y.wav",
-    "22": "u.wav",
-    "23": "i.wav",
-    "24": "o.wav",
-    "25": "p.wav",
-    "26": "[.wav",
-    "27": "].wav",
-    "28": "enter.wav",
-    "29": "tab.wav",
-    "30": "a.wav",
-    "31": "s.wav",
-    "32": "d.wav",
-    "33": "f.wav",
-    "34": "g.wav",
-    "35": "h.wav",
-    "36": "j.wav",
-    "37": "k.wav",
-    "38": "l.wav",
-    "39": "[.wav",
-    "40": "].wav",
-    "41": "q.wav",
-    "42": "shift.wav",
-    "43": "backspace.wav",
-    "44": "z.wav",
-    "45": "x.wav",
-    "46": "c.wav",
-    "47": "v.wav",
-    "48": "b.wav",
-    "49": "n.wav",
-    "50": "m.wav",
-    "51": "l.wav",
-    "52": "[.wav",
-    "53": "].wav",
-    "54": "shift.wav",
-    "55": "o.wav",
-    "56": "e.wav",
-    "57": "space.wav",
-    "58": "caps lock.wav",
-    "59": "w.wav",
-    "60": "e.wav",
-    "61": "e.wav",
-    "62": "r.wav",
-    "63": "t.wav",
-    "64": "y.wav",
-    "65": "u.wav",
-    "66": "i.wav",
-    "67": "o.wav",
-    "68": "p.wav",
-    "69": "u.wav",
-    "70": "i.wav",
-    "71": "y.wav",
-    "72": "u.wav",
-    "73": "i.wav",
-    "74": "p.wav",
-    "75": "h.wav",
-    "76": "j.wav",
-    "77": "k.wav",
-    "78": "enter.wav",
-    "79": "b.wav",
-    "80": "n.wav",
-    "81": "m.wav",
-    "82": "shift.wav",
-    "83": "[.wav",
-    "87": "].wav",
-    "88": "].wav",
-    "91": null,
-    "92": null,
-    "93": null,
-    "3597": null,
-    "3612": "shift.wav",
-    "3613": "backspace.wav",
-    "3637": "i.wav",
-    "3639": "u.wav",
-    "3640": "p.wav",
-    "3653": "o.wav",
-    "3655": "h.wav",
-    "3657": "k.wav",
-    "3663": "n.wav",
-    "3665": "m.wav",
-    "3666": "h.wav",
-    "3667": "b.wav",
-    "3675": "q.wav",
-    "3676": "[.wav",
-    "3677": "].wav",
-    "57416": "g.wav",
-    "57419": "c.wav",
-    "57421": "b.wav",
-    "57424": "v.wav",
-    "60999": "h.wav",
-    "61000": "g.wav",
-    "61001": "k.wav",
-    "61003": "c.wav",
-    "61005": "b.wav",
-    "61007": "n.wav",
-    "61008": "v.wav",
-    "61009": "m.wav",
-    "61010": "h.wav",
-    "61011": "b.wav"
-  }
+  "version": 4,
+  "engine": {
+    "maxVoices": 64,
+    "preload": "all",
+    "cacheBudgetMb": 192,
+    "gain": 1
+  },
+  "defaults": {},
+  "keys": {
+    "1": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "q.wav"
+          }
+        ]
+      }
+    },
+    "2": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "w.wav"
+          }
+        ]
+      }
+    },
+    "3": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "e.wav"
+          }
+        ]
+      }
+    },
+    "4": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "e.wav"
+          }
+        ]
+      }
+    },
+    "5": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "r.wav"
+          }
+        ]
+      }
+    },
+    "6": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "t.wav"
+          }
+        ]
+      }
+    },
+    "7": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "y.wav"
+          }
+        ]
+      }
+    },
+    "8": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "u.wav"
+          }
+        ]
+      }
+    },
+    "9": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "i.wav"
+          }
+        ]
+      }
+    },
+    "10": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "o.wav"
+          }
+        ]
+      }
+    },
+    "11": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "p.wav"
+          }
+        ]
+      }
+    },
+    "12": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "[.wav"
+          }
+        ]
+      }
+    },
+    "13": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "].wav"
+          }
+        ]
+      }
+    },
+    "14": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "backspace.wav"
+          }
+        ]
+      }
+    },
+    "15": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "tab.wav"
+          }
+        ]
+      }
+    },
+    "16": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "q.wav"
+          }
+        ]
+      }
+    },
+    "17": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "w.wav"
+          }
+        ]
+      }
+    },
+    "18": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "e.wav"
+          }
+        ]
+      }
+    },
+    "19": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "r.wav"
+          }
+        ]
+      }
+    },
+    "20": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "t.wav"
+          }
+        ]
+      }
+    },
+    "21": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "y.wav"
+          }
+        ]
+      }
+    },
+    "22": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "u.wav"
+          }
+        ]
+      }
+    },
+    "23": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "i.wav"
+          }
+        ]
+      }
+    },
+    "24": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "o.wav"
+          }
+        ]
+      }
+    },
+    "25": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "p.wav"
+          }
+        ]
+      }
+    },
+    "26": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "[.wav"
+          }
+        ]
+      }
+    },
+    "27": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "].wav"
+          }
+        ]
+      }
+    },
+    "28": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "enter.wav"
+          }
+        ]
+      }
+    },
+    "29": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "tab.wav"
+          }
+        ]
+      }
+    },
+    "30": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "a.wav"
+          }
+        ]
+      }
+    },
+    "31": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "s.wav"
+          }
+        ]
+      }
+    },
+    "32": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "d.wav"
+          }
+        ]
+      }
+    },
+    "33": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "f.wav"
+          }
+        ]
+      }
+    },
+    "34": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "g.wav"
+          }
+        ]
+      }
+    },
+    "35": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "h.wav"
+          }
+        ]
+      }
+    },
+    "36": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "j.wav"
+          }
+        ]
+      }
+    },
+    "37": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "k.wav"
+          }
+        ]
+      }
+    },
+    "38": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "l.wav"
+          }
+        ]
+      }
+    },
+    "39": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "[.wav"
+          }
+        ]
+      }
+    },
+    "40": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "].wav"
+          }
+        ]
+      }
+    },
+    "41": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "q.wav"
+          }
+        ]
+      }
+    },
+    "42": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "shift.wav"
+          }
+        ]
+      }
+    },
+    "43": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "backspace.wav"
+          }
+        ]
+      }
+    },
+    "44": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "z.wav"
+          }
+        ]
+      }
+    },
+    "45": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "x.wav"
+          }
+        ]
+      }
+    },
+    "46": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "c.wav"
+          }
+        ]
+      }
+    },
+    "47": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "v.wav"
+          }
+        ]
+      }
+    },
+    "48": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "b.wav"
+          }
+        ]
+      }
+    },
+    "49": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "n.wav"
+          }
+        ]
+      }
+    },
+    "50": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "m.wav"
+          }
+        ]
+      }
+    },
+    "51": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "l.wav"
+          }
+        ]
+      }
+    },
+    "52": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "[.wav"
+          }
+        ]
+      }
+    },
+    "53": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "].wav"
+          }
+        ]
+      }
+    },
+    "54": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "shift.wav"
+          }
+        ]
+      }
+    },
+    "55": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "o.wav"
+          }
+        ]
+      }
+    },
+    "56": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "e.wav"
+          }
+        ]
+      }
+    },
+    "57": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "space.wav"
+          }
+        ]
+      }
+    },
+    "58": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "caps lock.wav"
+          }
+        ]
+      }
+    },
+    "59": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "w.wav"
+          }
+        ]
+      }
+    },
+    "60": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "e.wav"
+          }
+        ]
+      }
+    },
+    "61": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "e.wav"
+          }
+        ]
+      }
+    },
+    "62": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "r.wav"
+          }
+        ]
+      }
+    },
+    "63": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "t.wav"
+          }
+        ]
+      }
+    },
+    "64": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "y.wav"
+          }
+        ]
+      }
+    },
+    "65": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "u.wav"
+          }
+        ]
+      }
+    },
+    "66": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "i.wav"
+          }
+        ]
+      }
+    },
+    "67": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "o.wav"
+          }
+        ]
+      }
+    },
+    "68": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "p.wav"
+          }
+        ]
+      }
+    },
+    "69": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "u.wav"
+          }
+        ]
+      }
+    },
+    "70": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "i.wav"
+          }
+        ]
+      }
+    },
+    "71": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "y.wav"
+          }
+        ]
+      }
+    },
+    "72": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "u.wav"
+          }
+        ]
+      }
+    },
+    "73": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "i.wav"
+          }
+        ]
+      }
+    },
+    "74": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "p.wav"
+          }
+        ]
+      }
+    },
+    "75": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "h.wav"
+          }
+        ]
+      }
+    },
+    "76": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "j.wav"
+          }
+        ]
+      }
+    },
+    "77": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "k.wav"
+          }
+        ]
+      }
+    },
+    "78": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "enter.wav"
+          }
+        ]
+      }
+    },
+    "79": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "b.wav"
+          }
+        ]
+      }
+    },
+    "80": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "n.wav"
+          }
+        ]
+      }
+    },
+    "81": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "m.wav"
+          }
+        ]
+      }
+    },
+    "82": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "shift.wav"
+          }
+        ]
+      }
+    },
+    "83": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "[.wav"
+          }
+        ]
+      }
+    },
+    "87": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "].wav"
+          }
+        ]
+      }
+    },
+    "88": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "].wav"
+          }
+        ]
+      }
+    },
+    "3612": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "shift.wav"
+          }
+        ]
+      }
+    },
+    "3613": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "backspace.wav"
+          }
+        ]
+      }
+    },
+    "3637": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "i.wav"
+          }
+        ]
+      }
+    },
+    "3639": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "u.wav"
+          }
+        ]
+      }
+    },
+    "3640": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "p.wav"
+          }
+        ]
+      }
+    },
+    "3653": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "o.wav"
+          }
+        ]
+      }
+    },
+    "3655": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "h.wav"
+          }
+        ]
+      }
+    },
+    "3657": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "k.wav"
+          }
+        ]
+      }
+    },
+    "3663": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "n.wav"
+          }
+        ]
+      }
+    },
+    "3665": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "m.wav"
+          }
+        ]
+      }
+    },
+    "3666": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "h.wav"
+          }
+        ]
+      }
+    },
+    "3667": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "b.wav"
+          }
+        ]
+      }
+    },
+    "3675": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "q.wav"
+          }
+        ]
+      }
+    },
+    "3676": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "[.wav"
+          }
+        ]
+      }
+    },
+    "3677": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "].wav"
+          }
+        ]
+      }
+    },
+    "57416": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "g.wav"
+          }
+        ]
+      }
+    },
+    "57419": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "c.wav"
+          }
+        ]
+      }
+    },
+    "57421": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "b.wav"
+          }
+        ]
+      }
+    },
+    "57424": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "v.wav"
+          }
+        ]
+      }
+    },
+    "60999": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "h.wav"
+          }
+        ]
+      }
+    },
+    "61000": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "g.wav"
+          }
+        ]
+      }
+    },
+    "61001": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "k.wav"
+          }
+        ]
+      }
+    },
+    "61003": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "c.wav"
+          }
+        ]
+      }
+    },
+    "61005": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "b.wav"
+          }
+        ]
+      }
+    },
+    "61007": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "n.wav"
+          }
+        ]
+      }
+    },
+    "61008": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "v.wav"
+          }
+        ]
+      }
+    },
+    "61009": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "m.wav"
+          }
+        ]
+      }
+    },
+    "61010": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "h.wav"
+          }
+        ]
+      }
+    },
+    "61011": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "b.wav"
+          }
+        ]
+      }
+    }
+  },
+  "checksums": {}
 }

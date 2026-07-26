@@ -1,469 +1,1268 @@
 {
-  "id": "custom-sound-pack-1605532336205",
   "name": "EG Oreo",
-  "key_define_type": "single",
-  "includes_numpad": false,
-  "sound": "oreo.ogg",
-  "defines": {
-    "1": [
-      971,
-      142
-    ],
-    "2": [
-      1276,
-      115
-    ],
-    "3": [
-      1604,
-      122
-    ],
-    "4": [
-      1929,
-      122
-    ],
-    "5": [
-      2237,
-      134
-    ],
-    "6": [
-      2571,
-      120
-    ],
-    "7": [
-      2869,
-      122
-    ],
-    "8": [
-      3177,
-      130
-    ],
-    "9": [
-      3482,
-      110
-    ],
-    "10": [
-      3782,
-      121
-    ],
-    "11": [
-      4077,
-      128
-    ],
-    "12": [
-      4376,
-      120
-    ],
-    "13": [
-      4673,
-      123
-    ],
-    "14": [
-      4991,
-      131
-    ],
-    "15": [
-      5968,
-      123
-    ],
-    "16": [
-      6221,
-      114
-    ],
-    "17": [
-      6515,
-      120
-    ],
-    "18": [
-      6823,
-      113
-    ],
-    "19": [
-      7112,
-      110
-    ],
-    "20": [
-      7412,
-      107
-    ],
-    "21": [
-      7716,
-      112
-    ],
-    "22": [
-      8012,
-      118
-    ],
-    "23": [
-      8326,
-      112
-    ],
-    "24": [
-      8623,
-      111
-    ],
-    "25": [
-      8932,
-      112
-    ],
-    "26": [
-      9246,
-      117
-    ],
-    "27": [
-      9586,
-      118
-    ],
-    "28": [
-      14603,
-      116
-    ],
-    "29": [
-      20804,
-      118
-    ],
-    "30": [
-      11171,
-      109
-    ],
-    "31": [
-      11462,
-      120
-    ],
-    "32": [
-      11784,
-      106
-    ],
-    "33": [
-      12080,
-      104
-    ],
-    "34": [
-      12400,
-      117
-    ],
-    "35": [
-      12715,
-      110
-    ],
-    "36": [
-      13014,
-      109
-    ],
-    "37": [
-      13333,
-      116
-    ],
-    "38": [
-      13638,
-      113
-    ],
-    "39": [
-      13967,
-      106
-    ],
-    "40": [
-      14280,
-      101
-    ],
-    "41": [
-      972,
-      131
-    ],
-    "42": [
-      15759,
-      123
-    ],
-    "43": [
-      9915,
-      121
-    ],
-    "44": [
-      16203,
-      127
-    ],
-    "45": [
-      16533,
-      117
-    ],
-    "46": [
-      16843,
-      111
-    ],
-    "47": [
-      17166,
-      103
-    ],
-    "48": [
-      17455,
-      109
-    ],
-    "49": [
-      17767,
-      108
-    ],
-    "50": [
-      18088,
-      104
-    ],
-    "51": [
-      18402,
-      104
-    ],
-    "52": [
-      18720,
-      110
-    ],
-    "53": [
-      19044,
-      108
-    ],
-    "54": [
-      19375,
-      124
-    ],
-    "55": [
-      6822,
-      116
-    ],
-    "56": [
-      21399,
-      119
-    ],
-    "57": [
-      24626,
-      143
-    ],
-    "58": [
-      10885,
-      126
-    ],
-    "59": [
-      1272,
-      126
-    ],
-    "60": [
-      1603,
-      125
-    ],
-    "61": [
-      1924,
-      128
-    ],
-    "62": [
-      2240,
-      126
-    ],
-    "63": [
-      2566,
-      126
-    ],
-    "64": [
-      2869,
-      122
-    ],
-    "65": [
-      3179,
-      131
-    ],
-    "66": [
-      3480,
-      115
-    ],
-    "67": [
-      3782,
-      124
-    ],
-    "68": [
-      4076,
-      126
-    ],
-    "69": [
-      6216,
-      122
-    ],
-    "70": [
-      12080,
-      103
-    ],
-    "71": [
-      8322,
-      117
-    ],
-    "72": [
-      8620,
-      113
-    ],
-    "73": [
-      8931,
-      114
-    ],
-    "74": [
-      7114,
-      109
-    ],
-    "75": [
-      9242,
-      122
-    ],
-    "76": [
-      9580,
-      131
-    ],
-    "77": [
-      9913,
-      118
-    ],
-    "78": [
-      7409,
-      117
-    ],
-    "79": [
-      10228,
-      118
-    ],
-    "80": [
-      11173,
-      110
-    ],
-    "81": [
-      11463,
-      118
-    ],
-    "82": [
-      8012,
-      115
-    ],
-    "83": [
-      12079,
-      112
-    ],
-    "87": [
-      4377,
-      120
-    ],
-    "88": [
-      4988,
-      135
-    ],
-    "91": null,
-    "92": null,
-    "93": null,
-    "3597": null,
-    "3612": [
-      7715,
-      112
-    ],
-    "3613": [
-      23519,
-      127
-    ],
-    "3637": [
-      6511,
-      126
-    ],
-    "3639": [
-      11782,
-      110
-    ],
-    "3640": [
-      22658,
-      126
-    ],
-    "3653": [
-      12715,
-      106
-    ],
-    "3655": [
-      13328,
-      126
-    ],
-    "3657": [
-      13641,
-      107
-    ],
-    "3663": [
-      14278,
-      104
-    ],
-    "3665": [
-      14602,
-      120
-    ],
-    "3666": [
-      13016,
-      108
-    ],
-    "3667": [
-      13964,
-      113
-    ],
-    "3675": [
-      21097,
-      129
-    ],
-    "3676": [
-      22917,
-      129
-    ],
-    "3677": [
-      23232,
-      126
-    ],
-    "57416": [
-      19720,
-      122
-    ],
-    "57419": [
-      23797,
-      119
-    ],
-    "57421": [
-      22657,
-      129
-    ],
-    "57424": [
-      24087,
-      119
-    ],
-    "60999": [
-      13328,
-      126
-    ],
-    "61000": [
-      19720,
-      122
-    ],
-    "61001": [
-      13641,
-      107
-    ],
-    "61003": [
-      23797,
-      119
-    ],
-    "61005": [
-      22657,
-      129
-    ],
-    "61007": [
-      14278,
-      104
-    ],
-    "61008": [
-      24087,
-      119
-    ],
-    "61009": [
-      14602,
-      120
-    ],
-    "61010": [
-      13016,
-      108
-    ],
-    "61011": [
-      13964,
-      113
-    ]
-  }
+  "version": 4,
+  "engine": {
+    "maxVoices": 64,
+    "preload": "all",
+    "cacheBudgetMb": 192,
+    "gain": 1
+  },
+  "defaults": {},
+  "keys": {
+    "1": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 0.971,
+            "durationSeconds": 0.142
+          }
+        ]
+      }
+    },
+    "2": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 1.276,
+            "durationSeconds": 0.115
+          }
+        ]
+      }
+    },
+    "3": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 1.604,
+            "durationSeconds": 0.122
+          }
+        ]
+      }
+    },
+    "4": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 1.929,
+            "durationSeconds": 0.122
+          }
+        ]
+      }
+    },
+    "5": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 2.237,
+            "durationSeconds": 0.134
+          }
+        ]
+      }
+    },
+    "6": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 2.571,
+            "durationSeconds": 0.12
+          }
+        ]
+      }
+    },
+    "7": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 2.869,
+            "durationSeconds": 0.122
+          }
+        ]
+      }
+    },
+    "8": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 3.177,
+            "durationSeconds": 0.13
+          }
+        ]
+      }
+    },
+    "9": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 3.482,
+            "durationSeconds": 0.11
+          }
+        ]
+      }
+    },
+    "10": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 3.782,
+            "durationSeconds": 0.121
+          }
+        ]
+      }
+    },
+    "11": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 4.077,
+            "durationSeconds": 0.128
+          }
+        ]
+      }
+    },
+    "12": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 4.376,
+            "durationSeconds": 0.12
+          }
+        ]
+      }
+    },
+    "13": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 4.673,
+            "durationSeconds": 0.123
+          }
+        ]
+      }
+    },
+    "14": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 4.991,
+            "durationSeconds": 0.131
+          }
+        ]
+      }
+    },
+    "15": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 5.968,
+            "durationSeconds": 0.123
+          }
+        ]
+      }
+    },
+    "16": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 6.221,
+            "durationSeconds": 0.114
+          }
+        ]
+      }
+    },
+    "17": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 6.515,
+            "durationSeconds": 0.12
+          }
+        ]
+      }
+    },
+    "18": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 6.823,
+            "durationSeconds": 0.113
+          }
+        ]
+      }
+    },
+    "19": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 7.112,
+            "durationSeconds": 0.11
+          }
+        ]
+      }
+    },
+    "20": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 7.412,
+            "durationSeconds": 0.107
+          }
+        ]
+      }
+    },
+    "21": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 7.716,
+            "durationSeconds": 0.112
+          }
+        ]
+      }
+    },
+    "22": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 8.012,
+            "durationSeconds": 0.118
+          }
+        ]
+      }
+    },
+    "23": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 8.326,
+            "durationSeconds": 0.112
+          }
+        ]
+      }
+    },
+    "24": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 8.623,
+            "durationSeconds": 0.111
+          }
+        ]
+      }
+    },
+    "25": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 8.932,
+            "durationSeconds": 0.112
+          }
+        ]
+      }
+    },
+    "26": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 9.246,
+            "durationSeconds": 0.117
+          }
+        ]
+      }
+    },
+    "27": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 9.586,
+            "durationSeconds": 0.118
+          }
+        ]
+      }
+    },
+    "28": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 14.603,
+            "durationSeconds": 0.116
+          }
+        ]
+      }
+    },
+    "29": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 20.804,
+            "durationSeconds": 0.118
+          }
+        ]
+      }
+    },
+    "30": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 11.171,
+            "durationSeconds": 0.109
+          }
+        ]
+      }
+    },
+    "31": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 11.462,
+            "durationSeconds": 0.12
+          }
+        ]
+      }
+    },
+    "32": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 11.784,
+            "durationSeconds": 0.106
+          }
+        ]
+      }
+    },
+    "33": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 12.08,
+            "durationSeconds": 0.104
+          }
+        ]
+      }
+    },
+    "34": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 12.4,
+            "durationSeconds": 0.117
+          }
+        ]
+      }
+    },
+    "35": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 12.715,
+            "durationSeconds": 0.11
+          }
+        ]
+      }
+    },
+    "36": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 13.014,
+            "durationSeconds": 0.109
+          }
+        ]
+      }
+    },
+    "37": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 13.333,
+            "durationSeconds": 0.116
+          }
+        ]
+      }
+    },
+    "38": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 13.638,
+            "durationSeconds": 0.113
+          }
+        ]
+      }
+    },
+    "39": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 13.967,
+            "durationSeconds": 0.106
+          }
+        ]
+      }
+    },
+    "40": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 14.28,
+            "durationSeconds": 0.101
+          }
+        ]
+      }
+    },
+    "41": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 0.972,
+            "durationSeconds": 0.131
+          }
+        ]
+      }
+    },
+    "42": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 15.759,
+            "durationSeconds": 0.123
+          }
+        ]
+      }
+    },
+    "43": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 9.915,
+            "durationSeconds": 0.121
+          }
+        ]
+      }
+    },
+    "44": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 16.203,
+            "durationSeconds": 0.127
+          }
+        ]
+      }
+    },
+    "45": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 16.533,
+            "durationSeconds": 0.117
+          }
+        ]
+      }
+    },
+    "46": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 16.843,
+            "durationSeconds": 0.111
+          }
+        ]
+      }
+    },
+    "47": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 17.166,
+            "durationSeconds": 0.103
+          }
+        ]
+      }
+    },
+    "48": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 17.455,
+            "durationSeconds": 0.109
+          }
+        ]
+      }
+    },
+    "49": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 17.767,
+            "durationSeconds": 0.108
+          }
+        ]
+      }
+    },
+    "50": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 18.088,
+            "durationSeconds": 0.104
+          }
+        ]
+      }
+    },
+    "51": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 18.402,
+            "durationSeconds": 0.104
+          }
+        ]
+      }
+    },
+    "52": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 18.72,
+            "durationSeconds": 0.11
+          }
+        ]
+      }
+    },
+    "53": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 19.044,
+            "durationSeconds": 0.108
+          }
+        ]
+      }
+    },
+    "54": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 19.375,
+            "durationSeconds": 0.124
+          }
+        ]
+      }
+    },
+    "55": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 6.822,
+            "durationSeconds": 0.116
+          }
+        ]
+      }
+    },
+    "56": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 21.399,
+            "durationSeconds": 0.119
+          }
+        ]
+      }
+    },
+    "57": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 24.626,
+            "durationSeconds": 0.143
+          }
+        ]
+      }
+    },
+    "58": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 10.885,
+            "durationSeconds": 0.126
+          }
+        ]
+      }
+    },
+    "59": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 1.272,
+            "durationSeconds": 0.126
+          }
+        ]
+      }
+    },
+    "60": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 1.603,
+            "durationSeconds": 0.125
+          }
+        ]
+      }
+    },
+    "61": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 1.924,
+            "durationSeconds": 0.128
+          }
+        ]
+      }
+    },
+    "62": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 2.24,
+            "durationSeconds": 0.126
+          }
+        ]
+      }
+    },
+    "63": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 2.566,
+            "durationSeconds": 0.126
+          }
+        ]
+      }
+    },
+    "64": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 2.869,
+            "durationSeconds": 0.122
+          }
+        ]
+      }
+    },
+    "65": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 3.179,
+            "durationSeconds": 0.131
+          }
+        ]
+      }
+    },
+    "66": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 3.48,
+            "durationSeconds": 0.115
+          }
+        ]
+      }
+    },
+    "67": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 3.782,
+            "durationSeconds": 0.124
+          }
+        ]
+      }
+    },
+    "68": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 4.076,
+            "durationSeconds": 0.126
+          }
+        ]
+      }
+    },
+    "69": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 6.216,
+            "durationSeconds": 0.122
+          }
+        ]
+      }
+    },
+    "70": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 12.08,
+            "durationSeconds": 0.103
+          }
+        ]
+      }
+    },
+    "71": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 8.322,
+            "durationSeconds": 0.117
+          }
+        ]
+      }
+    },
+    "72": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 8.62,
+            "durationSeconds": 0.113
+          }
+        ]
+      }
+    },
+    "73": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 8.931,
+            "durationSeconds": 0.114
+          }
+        ]
+      }
+    },
+    "74": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 7.114,
+            "durationSeconds": 0.109
+          }
+        ]
+      }
+    },
+    "75": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 9.242,
+            "durationSeconds": 0.122
+          }
+        ]
+      }
+    },
+    "76": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 9.58,
+            "durationSeconds": 0.131
+          }
+        ]
+      }
+    },
+    "77": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 9.913,
+            "durationSeconds": 0.118
+          }
+        ]
+      }
+    },
+    "78": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 7.409,
+            "durationSeconds": 0.117
+          }
+        ]
+      }
+    },
+    "79": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 10.228,
+            "durationSeconds": 0.118
+          }
+        ]
+      }
+    },
+    "80": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 11.173,
+            "durationSeconds": 0.11
+          }
+        ]
+      }
+    },
+    "81": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 11.463,
+            "durationSeconds": 0.118
+          }
+        ]
+      }
+    },
+    "82": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 8.012,
+            "durationSeconds": 0.115
+          }
+        ]
+      }
+    },
+    "83": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 12.079,
+            "durationSeconds": 0.112
+          }
+        ]
+      }
+    },
+    "87": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 4.377,
+            "durationSeconds": 0.12
+          }
+        ]
+      }
+    },
+    "88": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 4.988,
+            "durationSeconds": 0.135
+          }
+        ]
+      }
+    },
+    "3612": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 7.715,
+            "durationSeconds": 0.112
+          }
+        ]
+      }
+    },
+    "3613": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 23.519,
+            "durationSeconds": 0.127
+          }
+        ]
+      }
+    },
+    "3637": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 6.511,
+            "durationSeconds": 0.126
+          }
+        ]
+      }
+    },
+    "3639": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 11.782,
+            "durationSeconds": 0.11
+          }
+        ]
+      }
+    },
+    "3640": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 22.658,
+            "durationSeconds": 0.126
+          }
+        ]
+      }
+    },
+    "3653": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 12.715,
+            "durationSeconds": 0.106
+          }
+        ]
+      }
+    },
+    "3655": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 13.328,
+            "durationSeconds": 0.126
+          }
+        ]
+      }
+    },
+    "3657": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 13.641,
+            "durationSeconds": 0.107
+          }
+        ]
+      }
+    },
+    "3663": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 14.278,
+            "durationSeconds": 0.104
+          }
+        ]
+      }
+    },
+    "3665": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 14.602,
+            "durationSeconds": 0.12
+          }
+        ]
+      }
+    },
+    "3666": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 13.016,
+            "durationSeconds": 0.108
+          }
+        ]
+      }
+    },
+    "3667": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 13.964,
+            "durationSeconds": 0.113
+          }
+        ]
+      }
+    },
+    "3675": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 21.097,
+            "durationSeconds": 0.129
+          }
+        ]
+      }
+    },
+    "3676": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 22.917,
+            "durationSeconds": 0.129
+          }
+        ]
+      }
+    },
+    "3677": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 23.232,
+            "durationSeconds": 0.126
+          }
+        ]
+      }
+    },
+    "57416": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 19.72,
+            "durationSeconds": 0.122
+          }
+        ]
+      }
+    },
+    "57419": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 23.797,
+            "durationSeconds": 0.119
+          }
+        ]
+      }
+    },
+    "57421": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 22.657,
+            "durationSeconds": 0.129
+          }
+        ]
+      }
+    },
+    "57424": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 24.087,
+            "durationSeconds": 0.119
+          }
+        ]
+      }
+    },
+    "60999": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 13.328,
+            "durationSeconds": 0.126
+          }
+        ]
+      }
+    },
+    "61000": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 19.72,
+            "durationSeconds": 0.122
+          }
+        ]
+      }
+    },
+    "61001": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 13.641,
+            "durationSeconds": 0.107
+          }
+        ]
+      }
+    },
+    "61003": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 23.797,
+            "durationSeconds": 0.119
+          }
+        ]
+      }
+    },
+    "61005": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 22.657,
+            "durationSeconds": 0.129
+          }
+        ]
+      }
+    },
+    "61007": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 14.278,
+            "durationSeconds": 0.104
+          }
+        ]
+      }
+    },
+    "61008": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 24.087,
+            "durationSeconds": 0.119
+          }
+        ]
+      }
+    },
+    "61009": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 14.602,
+            "durationSeconds": 0.12
+          }
+        ]
+      }
+    },
+    "61010": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 13.016,
+            "durationSeconds": 0.108
+          }
+        ]
+      }
+    },
+    "61011": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "oreo.ogg",
+            "offsetSeconds": 13.964,
+            "durationSeconds": 0.113
+          }
+        ]
+      }
+    }
+  },
+  "checksums": {}
 }

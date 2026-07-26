@@ -2,7 +2,7 @@
 
 import path from 'path';
 
-const SUPPORTED_VERSIONS: ReadonlySet<number> = new Set([1, 2, 3, 4]);
+const SUPPORTED_VERSIONS: ReadonlySet<number> = new Set([3, 4]);
 export const SUPPORTED_AUDIO_EXTENSIONS: ReadonlySet<string> = new Set([
   '.aac',
   '.flac',
@@ -16,8 +16,6 @@ export const SUPPORTED_AUDIO_EXTENSIONS: ReadonlySet<string> = new Set([
   '.webm',
 ]);
 const MAX_NAME_LENGTH = 200;
-const MAX_DEFINITIONS = 4096;
-const MAX_TEMPLATE_SPAN = 100;
 
 /** Loose shape for user-authored JSON that has not been validated yet. */
 type AnyRecord = Record<string, any>;
@@ -68,17 +66,7 @@ export interface ValidatedV3Config {
   [key: string]: unknown;
 }
 
-export interface ValidatedLegacyConfig {
-  name: string;
-  version: 1 | 2;
-  key_define_type: 'single' | 'multi';
-  sound: string;
-  soundup?: string;
-  defines: Record<string, unknown>;
-  [key: string]: unknown;
-}
-
-export type ValidatedSoundpackConfig = ValidatedV3Config | ValidatedLegacyConfig;
+export type ValidatedSoundpackConfig = ValidatedV3Config;
 
 export class SoundpackValidationError extends Error {
   readonly code: string;
@@ -124,7 +112,7 @@ export function normalizeSoundReference(value: unknown, field = 'sound file'): s
         segment === '' ||
         segment === '.' ||
         segment === '..' ||
-        /[<>:"|?*]|\p{Cc}/u.test(segment) ||
+        /[<>:"|?*{}]|\p{Cc}/u.test(segment) ||
         /[. ]$/.test(segment) ||
         unsafeWindowsName.test(segment),
     )
@@ -132,24 +120,7 @@ export function normalizeSoundReference(value: unknown, field = 'sound file'): s
     throw new SoundpackValidationError(`${field} contains a path that is unsafe on Windows.`);
   }
 
-  const templates = slashPath.match(/\{[^}]*\}/g) || [];
-  if (templates.length > 1) {
-    throw new SoundpackValidationError(`${field} contains too many number templates.`);
-  }
-  for (const template of templates) {
-    const match = /^\{(-?\d+)-(-?\d+)\}$/.exec(template);
-    if (!match) {
-      throw new SoundpackValidationError(`${field} contains an invalid number template.`);
-    }
-    const start = Number(match[1]);
-    const end = Number(match[2]);
-    if (start < 0 || end < start || end - start > MAX_TEMPLATE_SPAN) {
-      throw new SoundpackValidationError(`${field} contains an unsafe number template range.`);
-    }
-  }
-
-  const extensionProbe = slashPath.replace(/\{[^}]*\}/g, '0');
-  const extension = path.posix.extname(extensionProbe).toLowerCase();
+  const extension = path.posix.extname(slashPath).toLowerCase();
   if (!SUPPORTED_AUDIO_EXTENSIONS.has(extension)) {
     throw new SoundpackValidationError(
       `${field} uses unsupported audio type "${extension || 'none'}".`,
@@ -157,17 +128,6 @@ export function normalizeSoundReference(value: unknown, field = 'sound file'): s
   }
 
   return slashPath;
-}
-
-function validateSpriteDefinition(value: unknown, key: string): void {
-  if (!Array.isArray(value) || value.length < 2) {
-    throw new SoundpackValidationError(`defines.${key} must contain start and duration values.`);
-  }
-  const start = Number(value[0]);
-  const duration = Number(value[1]);
-  if (!Number.isFinite(start) || start < 0 || !Number.isFinite(duration) || duration <= 0) {
-    throw new SoundpackValidationError(`defines.${key} has an invalid start or duration.`);
-  }
 }
 
 function validateFiniteRange(
@@ -329,11 +289,13 @@ function validateModernConfig(
     ...config,
     name,
     version,
-    author: config['author'] === undefined ? '' : requireNonEmptyString(config['author'], 'author'),
-    license:
-      config['license'] === undefined ? '' : requireNonEmptyString(config['license'], 'license'),
+    // Empty/absent author, license, and sampleRate all normalize to their
+    // defaults so validation stays idempotent — the load path validates a
+    // config, then re-validates the result inside createAudioManifest.
+    author: !config['author'] ? '' : requireNonEmptyString(config['author'], 'author'),
+    license: !config['license'] ? '' : requireNonEmptyString(config['license'], 'license'),
     sampleRate:
-      config['sampleRate'] === undefined
+      config['sampleRate'] === undefined || config['sampleRate'] === null
         ? null
         : validateFiniteRange(config['sampleRate'], 'sampleRate', 22050, 192000),
     engine: {
@@ -357,7 +319,7 @@ export function validateSoundpackConfig(config: unknown): ValidatedSoundpackConf
     throw new SoundpackValidationError('config.json must contain a JSON object.');
   }
 
-  const version = config['version'] === undefined ? 1 : Number(config['version']);
+  const version = Number(config['version']);
   if (!Number.isInteger(version) || !SUPPORTED_VERSIONS.has(version)) {
     throw new SoundpackValidationError(
       `Unsupported soundpack config version: ${config['version']}.`,
@@ -369,111 +331,21 @@ export function validateSoundpackConfig(config: unknown): ValidatedSoundpackConf
   if (name.length > MAX_NAME_LENGTH) {
     throw new SoundpackValidationError(`name must not exceed ${MAX_NAME_LENGTH} characters.`);
   }
-  if (version === 3 || version === 4) {
-    return validateModernConfig(config, name, version);
-  }
-
-  if (config['key_define_type'] !== 'single' && config['key_define_type'] !== 'multi') {
-    throw new SoundpackValidationError('key_define_type must be either "single" or "multi".');
-  }
-
-  if (!isPlainObject(config['defines'])) {
-    throw new SoundpackValidationError('defines must be an object.');
-  }
-  const definitionEntries = Object.entries(config['defines'] as AnyRecord);
-  if (definitionEntries.length === 0 || definitionEntries.length > MAX_DEFINITIONS) {
-    throw new SoundpackValidationError(
-      `defines must contain between 1 and ${MAX_DEFINITIONS} entries.`,
-    );
-  }
-  if (definitionEntries.every(([, value]) => value === null || value === undefined)) {
-    throw new SoundpackValidationError('defines must contain at least one playable definition.');
-  }
-
-  normalizeSoundReference(config['sound'], 'sound');
-  if (version === 2) {
-    normalizeSoundReference(config['soundup'], 'soundup');
-  }
-
-  for (const [key, value] of definitionEntries) {
-    if (!/^[0-9]+(?:-up)?$/.test(key)) {
-      throw new SoundpackValidationError(`defines contains an invalid key "${key}".`);
-    }
-    if (value === null || value === undefined) {
-      continue;
-    }
-    if (config['key_define_type'] === 'single') {
-      validateSpriteDefinition(value, key);
-    } else {
-      normalizeSoundReference(value, `defines.${key}`);
-    }
-  }
-
-  return {
-    ...config,
-    name,
-    version,
-  } as ValidatedLegacyConfig;
-}
-
-export function expandNumberTemplate(reference: string, random: () => number = Math.random): string {
-  return reference.replace(/\{(-?\d+)-(-?\d+)\}/g, (_template, startValue, endValue) => {
-    const start = Number(startValue);
-    const end = Number(endValue);
-    const offset = Math.floor(random() * (end - start + 1));
-    return String(start + offset);
-  });
-}
-
-export function expandNumberTemplateVariants(reference: string): string[] {
-  const match = /\{(-?\d+)-(-?\d+)\}/.exec(reference);
-  if (!match) {
-    return [reference];
-  }
-  const start = Number(match[1]);
-  const end = Number(match[2]);
-  const variants: string[] = [];
-  for (let value = start; value <= end; value += 1) {
-    variants.push(reference.replace(match[0], String(value)));
-  }
-  return variants;
+  return validateModernConfig(config, name, version as 3 | 4);
 }
 
 export function listReferencedSoundFiles(config: unknown): string[] {
   const validated = validateSoundpackConfig(config);
   const references = new Set<string>();
-  if (validated.version === 3 || validated.version === 4) {
-    const v3 = validated as ValidatedV3Config;
-    const addLayer = (layer?: ValidatedLayer): void => {
-      if (!layer) return;
-      layer.samples.forEach((sample) => references.add(sample.file));
-    };
-    addLayer(v3.defaults.keydown);
-    addLayer(v3.defaults.keyup);
-    Object.values(v3.keys).forEach((events) => {
-      addLayer(events.keydown);
-      addLayer(events.keyup);
-    });
-    return [...references];
-  }
-
-  const legacy = validated as ValidatedLegacyConfig;
-  if (legacy.key_define_type === 'single' || legacy.version === 2) {
-    expandNumberTemplateVariants(legacy.sound).forEach((reference) => references.add(reference));
-  }
-  if (legacy.version === 2) {
-    expandNumberTemplateVariants(String(legacy.soundup)).forEach((reference) =>
-      references.add(reference),
-    );
-  }
-  if (legacy.key_define_type === 'multi') {
-    for (const reference of Object.values(legacy.defines)) {
-      if (reference !== null && reference !== undefined) {
-        expandNumberTemplateVariants(String(reference)).forEach((variant) =>
-          references.add(variant),
-        );
-      }
-    }
-  }
+  const addLayer = (layer?: ValidatedLayer): void => {
+    if (!layer) return;
+    layer.samples.forEach((sample) => references.add(sample.file));
+  };
+  addLayer(validated.defaults.keydown);
+  addLayer(validated.defaults.keyup);
+  Object.values(validated.keys).forEach((events) => {
+    addLayer(events.keydown);
+    addLayer(events.keyup);
+  });
   return [...references];
 }

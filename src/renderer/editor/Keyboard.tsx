@@ -25,7 +25,7 @@ function KeyPopover({ keycode, pack, up, left, onSave, onClose }: DraftProps) {
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    if (pack.key_define_type === 'single') {
+    if (pack.mode === 'sprite') {
       onSave(keycode, [Number(form.get('start') ?? 0), Number(form.get('length') ?? 0)]);
     } else {
       onSave(keycode, String(form.get('file') ?? ''));
@@ -38,7 +38,7 @@ function KeyPopover({ keycode, pack, up, left, onSave, onClose }: DraftProps) {
       onClick={(event) => event.stopPropagation()}
       onSubmit={submit}
     >
-      {pack.key_define_type === 'single' ? (
+      {pack.mode === 'sprite' ? (
         <>
           <div className="popover-title">Start and length (ms)</div>
           <div className="popover-inputs">

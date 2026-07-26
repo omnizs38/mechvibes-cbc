@@ -1,7 +1,7 @@
 'use strict';
 
 import { keycodesFill, keycodesRemap } from '../libs/keycodes';
-import { expandNumberTemplateVariants, validateSoundpackConfig } from '../libs/soundpacks/validation';
+import { validateSoundpackConfig } from '../libs/soundpacks/validation';
 import type { AudioManifest, ManifestLayer, ManifestSample } from './manifest';
 import type { SoundpackMetadata } from '../libs/soundpacks/registry';
 
@@ -38,28 +38,6 @@ export function remapEventLayers(
   return events;
 }
 
-export function resolveReferences(
-  packPath: string,
-  references: string[],
-  fallbackReferences: string[] = [],
-  getFile: GetFile = defaultGetFile,
-): ManifestSample[] {
-  const resolveAll = (items: string[]): ManifestSample[] =>
-    items.map((reference) => ({
-      source: getFile(packPath, reference),
-      file: reference,
-      gain: 1,
-      pitch: 0,
-      weight: 1,
-    }));
-  try {
-    return resolveAll(references);
-  } catch (error) {
-    if (fallbackReferences.length === 0) throw error;
-    return resolveAll(fallbackReferences);
-  }
-}
-
 export function baseLayer(
   samples: ManifestSample[],
   overrides: Partial<ManifestLayer> = {},
@@ -72,95 +50,6 @@ export function baseLayer(
     priority: 5,
     envelope: { attackMs: 0, releaseMs: 12 },
     ...overrides,
-  };
-}
-
-export function adaptV1(
-  config: AnyConfig,
-  metadata: SoundpackMetadata,
-  getFile: GetFile = defaultGetFile,
-): AudioManifest {
-  const layers: Record<string, EventLayers> = {};
-  if (config['key_define_type'] === 'single') {
-    const source = getFile(metadata.abs_path, config['sound']);
-    for (const [keycode, sprite] of Object.entries(config['defines'] as AnyConfig)) {
-      if (!sprite) continue;
-      const values = sprite as [number, number];
-      layers[keycode] = {
-        keydown: baseLayer([
-          {
-            source,
-            file: config['sound'],
-            offsetSeconds: Number(values[0]) / 1000,
-            durationSeconds: Number(values[1]) / 1000,
-            gain: 1,
-            pitch: 0,
-            weight: 1,
-          },
-        ]),
-      };
-    }
-  } else {
-    for (const [keycode, reference] of Object.entries(config['defines'] as AnyConfig)) {
-      if (!reference) continue;
-      layers[keycode] = {
-        keydown: baseLayer(resolveReferences(metadata.abs_path, [String(reference)], [], getFile)),
-      };
-    }
-  }
-  return {
-    id: metadata.pack_id,
-    name: config['name'],
-    version: 1,
-    maxVoices: 64,
-    cacheBudgetBytes: 192 * 1024 * 1024,
-    preload: 'all',
-    gain: 1,
-    events: remapEventLayers(layers),
-    checksums: {},
-  };
-}
-
-export function adaptV2(
-  config: AnyConfig,
-  metadata: SoundpackMetadata,
-  getFile: GetFile = defaultGetFile,
-): AudioManifest {
-  const layers: Record<string, EventLayers> = {};
-  const filled = keycodesFill(config['defines'] as Record<string, unknown>);
-  for (const keycode of Object.keys(filled)) {
-    const downReference = config['defines'][keycode] || config['sound'];
-    const upReference = config['defines'][`${keycode}-up`] || config['soundup'];
-    layers[keycode] = {
-      keydown: baseLayer(
-        resolveReferences(
-          metadata.abs_path,
-          expandNumberTemplateVariants(String(downReference)),
-          expandNumberTemplateVariants(String(config['sound'])),
-          getFile,
-        ),
-      ),
-      keyup: baseLayer(
-        resolveReferences(
-          metadata.abs_path,
-          expandNumberTemplateVariants(String(upReference)),
-          expandNumberTemplateVariants(String(config['soundup'])),
-          getFile,
-        ),
-        { priority: 4 },
-      ),
-    };
-  }
-  return {
-    id: metadata.pack_id,
-    name: config['name'],
-    version: 2,
-    maxVoices: 64,
-    cacheBudgetBytes: 192 * 1024 * 1024,
-    preload: 'all',
-    gain: 1,
-    events: remapEventLayers(layers),
-    checksums: {},
   };
 }
 
@@ -239,11 +128,12 @@ export function adaptV4(
 export function createAudioManifest(
   config: unknown,
   metadata: SoundpackMetadata,
-  { getFile = defaultGetFile }: { getFile?: GetFile } = {},
+  { getFile = defaultGetFile, validate = true }: { getFile?: GetFile; validate?: boolean } = {},
 ): AudioManifest {
-  const validated = validateSoundpackConfig(config) as AnyConfig;
-  if (validated['version'] === 1) return adaptV1(validated, metadata, getFile);
-  if (validated['version'] === 2) return adaptV2(validated, metadata, getFile);
+  // The load path validates the config at discovery and hands the result
+  // straight here, so callers with an already-validated config pass
+  // `validate: false` to skip a redundant second full validation pass.
+  const validated = (validate ? validateSoundpackConfig(config) : config) as AnyConfig;
   if (validated['version'] === 4) return adaptV4(validated, metadata, getFile);
   return adaptV3(validated, metadata, getFile);
 }

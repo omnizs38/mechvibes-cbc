@@ -1,465 +1,1268 @@
 {
-  "id": "custom-sound-pack-1582707445334",
   "name": "CherryMX Blue - ABS keycaps",
-  "key_define_type": "single",
-  "includes_numpad": false,
-  "sound": "sound.ogg",
-  "defines": {
-    "1": [
-      1754,
-      184
-    ],
-    "2": [
-      10135,
-      199
-    ],
-    "3": [
-      10562,
-      185
-    ],
-    "4": [
-      10966,
-      189
-    ],
-    "5": [
-      11329,
-      199
-    ],
-    "6": [
-      11706,
-      196
-    ],
-    "7": [
-      12094,
-      180
-    ],
-    "8": [
-      12467,
-      184
-    ],
-    "9": [
-      12863,
-      190
-    ],
-    "10": [
-      13248,
-      195
-    ],
-    "11": [
-      13633,
-      170
-    ],
-    "12": [
-      13988,
-      186
-    ],
-    "13": [
-      14372,
-      180
-    ],
-    "14": [
-      14748,
-      212
-    ],
-    "15": [
-      16940,
-      179
-    ],
-    "16": [
-      17316,
-      199
-    ],
-    "17": [
-      17700,
-      172
-    ],
-    "18": [
-      18054,
-      187
-    ],
-    "19": [
-      18400,
-      184
-    ],
-    "20": [
-      18761,
-      176
-    ],
-    "21": [
-      19116,
-      188
-    ],
-    "22": [
-      19495,
-      186
-    ],
-    "23": [
-      19876,
-      174
-    ],
-    "24": [
-      20238,
-      170
-    ],
-    "25": [
-      20605,
-      158
-    ],
-    "26": [
-      20976,
-      164
-    ],
-    "27": [
-      21348,
-      158
-    ],
-    "28": [
-      28558,
-      161
-    ],
-    "29": [
-      35733,
-      190
-    ],
-    "30": [
-      24330,
-      196
-    ],
-    "31": [
-      24700,
-      202
-    ],
-    "32": [
-      25071,
-      194
-    ],
-    "33": [
-      25444,
-      206
-    ],
-    "34": [
-      25803,
-      188
-    ],
-    "35": [
-      26159,
-      185
-    ],
-    "36": [
-      26534,
-      168
-    ],
-    "37": [
-      26928,
-      190
-    ],
-    "38": [
-      27347,
-      180
-    ],
-    "39": [
-      27733,
-      183
-    ],
-    "40": [
-      28157,
-      176
-    ],
-    "41": [
-      9749,
-      195
-    ],
-    "42": [
-      29603,
-      226
-    ],
-    "43": [
-      21707,
-      182
-    ],
-    "44": [
-      30046,
-      175
-    ],
-    "45": [
-      30385,
-      177
-    ],
-    "46": [
-      30761,
-      189
-    ],
-    "47": [
-      31123,
-      191
-    ],
-    "48": [
-      31475,
-      196
-    ],
-    "49": [
-      31891,
-      169
-    ],
-    "50": [
-      32333,
-      175
-    ],
-    "51": [
-      33011,
-      186
-    ],
-    "52": [
-      33438,
-      172
-    ],
-    "53": [
-      33828,
-      178
-    ],
-    "54": [
-      34215,
-      180
-    ],
-    "55": [
-      7583,
-      193
-    ],
-    "56": [
-      36465,
-      214
-    ],
-    "57": [
-      36804,
-      240
-    ],
-    "58": [
-      23925,
-      207
-    ],
-    "59": [
-      2222,
-      186
-    ],
-    "60": [
-      2617,
-      180
-    ],
-    "61": [
-      3028,
-      189
-    ],
-    "62": [
-      3385,
-      223
-    ],
-    "63": [
-      3792,
-      193
-    ],
-    "64": [
-      4136,
-      212
-    ],
-    "65": [
-      4540,
-      188
-    ],
-    "66": [
-      4903,
-      193
-    ],
-    "67": [
-      5296,
-      193
-    ],
-    "68": [
-      5666,
-      183
-    ],
-    "69": [
-      6818,
-      167
-    ],
-    "70": [
-      7187,
-      183
-    ],
-    "71": [
-      15156,
-      180
-    ],
-    "72": [
-      15526,
-      204
-    ],
-    "73": [
-      15893,
-      157
-    ],
-    "74": [
-      13988,
-      186
-    ],
-    "75": [
-      22116,
-      179
-    ],
-    "76": [
-      22513,
-      173
-    ],
-    "77": [
-      22862,
-      158
-    ],
-    "78": [
-      14748,
-      212
-    ],
-    "79": [
-      39220,
-      169
-    ],
-    "80": [
-      39589,
-      179
-    ],
-    "81": [
-      39954,
-      183
-    ],
-    "82": [
-      34215,
-      180
-    ],
-    "83": [
-      34704,
-      159
-    ],
-    "87": [
-      6054,
-      180
-    ],
-    "88": [
-      6425,
-      182
-    ],
-    "3612": [
-      28558,
-      161
-    ],
-    "3613": [
-      38821,
-      188
-    ],
-    "3637": [
-      7187,
-      183
-    ],
-    "3639": [
-      6818,
-      167
-    ],
-    "3640": [
-      37730,
-      184
-    ],
-    "3653": [
-      7583,
-      193
-    ],
-    "3655": [
-      15526,
-      204
-    ],
-    "3657": [
-      15893,
-      157
-    ],
-    "3663": [
-      22513,
-      173
-    ],
-    "3665": [
-      22862,
-      158
-    ],
-    "3666": [
-      15156,
-      180
-    ],
-    "3667": [
-      22116,
-      179
-    ],
-    "3675": [
-      36115,
-      205
-    ],
-    "3676": [
-      38116,
-      184
-    ],
-    "3677": [
-      38821,
-      188
-    ],
-    "57416": [
-      34704,
-      159
-    ],
-    "57419": [
-      39220,
-      169
-    ],
-    "57421": [
-      39954,
-      183
-    ],
-    "57424": [
-      39589,
-      179
-    ],
-    "60999": [
-      15526,
-      204
-    ],
-    "61000": [
-      34704,
-      159
-    ],
-    "61001": [
-      15893,
-      157
-    ],
-    "61003": [
-      39220,
-      169
-    ],
-    "61005": [
-      39954,
-      183
-    ],
-    "61007": [
-      22513,
-      173
-    ],
-    "61008": [
-      39589,
-      179
-    ],
-    "61009": [
-      22862,
-      158
-    ],
-    "61010": [
-      15156,
-      180
-    ],
-    "61011": [
-      22116,
-      179
-    ]
-  }
+  "version": 4,
+  "engine": {
+    "maxVoices": 64,
+    "preload": "all",
+    "cacheBudgetMb": 192,
+    "gain": 1
+  },
+  "defaults": {},
+  "keys": {
+    "1": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 1.754,
+            "durationSeconds": 0.184
+          }
+        ]
+      }
+    },
+    "2": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 10.135,
+            "durationSeconds": 0.199
+          }
+        ]
+      }
+    },
+    "3": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 10.562,
+            "durationSeconds": 0.185
+          }
+        ]
+      }
+    },
+    "4": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 10.966,
+            "durationSeconds": 0.189
+          }
+        ]
+      }
+    },
+    "5": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 11.329,
+            "durationSeconds": 0.199
+          }
+        ]
+      }
+    },
+    "6": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 11.706,
+            "durationSeconds": 0.196
+          }
+        ]
+      }
+    },
+    "7": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 12.094,
+            "durationSeconds": 0.18
+          }
+        ]
+      }
+    },
+    "8": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 12.467,
+            "durationSeconds": 0.184
+          }
+        ]
+      }
+    },
+    "9": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 12.863,
+            "durationSeconds": 0.19
+          }
+        ]
+      }
+    },
+    "10": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 13.248,
+            "durationSeconds": 0.195
+          }
+        ]
+      }
+    },
+    "11": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 13.633,
+            "durationSeconds": 0.17
+          }
+        ]
+      }
+    },
+    "12": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 13.988,
+            "durationSeconds": 0.186
+          }
+        ]
+      }
+    },
+    "13": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 14.372,
+            "durationSeconds": 0.18
+          }
+        ]
+      }
+    },
+    "14": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 14.748,
+            "durationSeconds": 0.212
+          }
+        ]
+      }
+    },
+    "15": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 16.94,
+            "durationSeconds": 0.179
+          }
+        ]
+      }
+    },
+    "16": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 17.316,
+            "durationSeconds": 0.199
+          }
+        ]
+      }
+    },
+    "17": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 17.7,
+            "durationSeconds": 0.172
+          }
+        ]
+      }
+    },
+    "18": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 18.054,
+            "durationSeconds": 0.187
+          }
+        ]
+      }
+    },
+    "19": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 18.4,
+            "durationSeconds": 0.184
+          }
+        ]
+      }
+    },
+    "20": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 18.761,
+            "durationSeconds": 0.176
+          }
+        ]
+      }
+    },
+    "21": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 19.116,
+            "durationSeconds": 0.188
+          }
+        ]
+      }
+    },
+    "22": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 19.495,
+            "durationSeconds": 0.186
+          }
+        ]
+      }
+    },
+    "23": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 19.876,
+            "durationSeconds": 0.174
+          }
+        ]
+      }
+    },
+    "24": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 20.238,
+            "durationSeconds": 0.17
+          }
+        ]
+      }
+    },
+    "25": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 20.605,
+            "durationSeconds": 0.158
+          }
+        ]
+      }
+    },
+    "26": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 20.976,
+            "durationSeconds": 0.164
+          }
+        ]
+      }
+    },
+    "27": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 21.348,
+            "durationSeconds": 0.158
+          }
+        ]
+      }
+    },
+    "28": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 28.558,
+            "durationSeconds": 0.161
+          }
+        ]
+      }
+    },
+    "29": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 35.733,
+            "durationSeconds": 0.19
+          }
+        ]
+      }
+    },
+    "30": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 24.33,
+            "durationSeconds": 0.196
+          }
+        ]
+      }
+    },
+    "31": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 24.7,
+            "durationSeconds": 0.202
+          }
+        ]
+      }
+    },
+    "32": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 25.071,
+            "durationSeconds": 0.194
+          }
+        ]
+      }
+    },
+    "33": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 25.444,
+            "durationSeconds": 0.206
+          }
+        ]
+      }
+    },
+    "34": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 25.803,
+            "durationSeconds": 0.188
+          }
+        ]
+      }
+    },
+    "35": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 26.159,
+            "durationSeconds": 0.185
+          }
+        ]
+      }
+    },
+    "36": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 26.534,
+            "durationSeconds": 0.168
+          }
+        ]
+      }
+    },
+    "37": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 26.928,
+            "durationSeconds": 0.19
+          }
+        ]
+      }
+    },
+    "38": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 27.347,
+            "durationSeconds": 0.18
+          }
+        ]
+      }
+    },
+    "39": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 27.733,
+            "durationSeconds": 0.183
+          }
+        ]
+      }
+    },
+    "40": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 28.157,
+            "durationSeconds": 0.176
+          }
+        ]
+      }
+    },
+    "41": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 9.749,
+            "durationSeconds": 0.195
+          }
+        ]
+      }
+    },
+    "42": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 29.603,
+            "durationSeconds": 0.226
+          }
+        ]
+      }
+    },
+    "43": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 21.707,
+            "durationSeconds": 0.182
+          }
+        ]
+      }
+    },
+    "44": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 30.046,
+            "durationSeconds": 0.175
+          }
+        ]
+      }
+    },
+    "45": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 30.385,
+            "durationSeconds": 0.177
+          }
+        ]
+      }
+    },
+    "46": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 30.761,
+            "durationSeconds": 0.189
+          }
+        ]
+      }
+    },
+    "47": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 31.123,
+            "durationSeconds": 0.191
+          }
+        ]
+      }
+    },
+    "48": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 31.475,
+            "durationSeconds": 0.196
+          }
+        ]
+      }
+    },
+    "49": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 31.891,
+            "durationSeconds": 0.169
+          }
+        ]
+      }
+    },
+    "50": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 32.333,
+            "durationSeconds": 0.175
+          }
+        ]
+      }
+    },
+    "51": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 33.011,
+            "durationSeconds": 0.186
+          }
+        ]
+      }
+    },
+    "52": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 33.438,
+            "durationSeconds": 0.172
+          }
+        ]
+      }
+    },
+    "53": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 33.828,
+            "durationSeconds": 0.178
+          }
+        ]
+      }
+    },
+    "54": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 34.215,
+            "durationSeconds": 0.18
+          }
+        ]
+      }
+    },
+    "55": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 7.583,
+            "durationSeconds": 0.193
+          }
+        ]
+      }
+    },
+    "56": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 36.465,
+            "durationSeconds": 0.214
+          }
+        ]
+      }
+    },
+    "57": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 36.804,
+            "durationSeconds": 0.24
+          }
+        ]
+      }
+    },
+    "58": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 23.925,
+            "durationSeconds": 0.207
+          }
+        ]
+      }
+    },
+    "59": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 2.222,
+            "durationSeconds": 0.186
+          }
+        ]
+      }
+    },
+    "60": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 2.617,
+            "durationSeconds": 0.18
+          }
+        ]
+      }
+    },
+    "61": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 3.028,
+            "durationSeconds": 0.189
+          }
+        ]
+      }
+    },
+    "62": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 3.385,
+            "durationSeconds": 0.223
+          }
+        ]
+      }
+    },
+    "63": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 3.792,
+            "durationSeconds": 0.193
+          }
+        ]
+      }
+    },
+    "64": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 4.136,
+            "durationSeconds": 0.212
+          }
+        ]
+      }
+    },
+    "65": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 4.54,
+            "durationSeconds": 0.188
+          }
+        ]
+      }
+    },
+    "66": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 4.903,
+            "durationSeconds": 0.193
+          }
+        ]
+      }
+    },
+    "67": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 5.296,
+            "durationSeconds": 0.193
+          }
+        ]
+      }
+    },
+    "68": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 5.666,
+            "durationSeconds": 0.183
+          }
+        ]
+      }
+    },
+    "69": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 6.818,
+            "durationSeconds": 0.167
+          }
+        ]
+      }
+    },
+    "70": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 7.187,
+            "durationSeconds": 0.183
+          }
+        ]
+      }
+    },
+    "71": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 15.156,
+            "durationSeconds": 0.18
+          }
+        ]
+      }
+    },
+    "72": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 15.526,
+            "durationSeconds": 0.204
+          }
+        ]
+      }
+    },
+    "73": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 15.893,
+            "durationSeconds": 0.157
+          }
+        ]
+      }
+    },
+    "74": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 13.988,
+            "durationSeconds": 0.186
+          }
+        ]
+      }
+    },
+    "75": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 22.116,
+            "durationSeconds": 0.179
+          }
+        ]
+      }
+    },
+    "76": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 22.513,
+            "durationSeconds": 0.173
+          }
+        ]
+      }
+    },
+    "77": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 22.862,
+            "durationSeconds": 0.158
+          }
+        ]
+      }
+    },
+    "78": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 14.748,
+            "durationSeconds": 0.212
+          }
+        ]
+      }
+    },
+    "79": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 39.22,
+            "durationSeconds": 0.169
+          }
+        ]
+      }
+    },
+    "80": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 39.589,
+            "durationSeconds": 0.179
+          }
+        ]
+      }
+    },
+    "81": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 39.954,
+            "durationSeconds": 0.183
+          }
+        ]
+      }
+    },
+    "82": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 34.215,
+            "durationSeconds": 0.18
+          }
+        ]
+      }
+    },
+    "83": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 34.704,
+            "durationSeconds": 0.159
+          }
+        ]
+      }
+    },
+    "87": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 6.054,
+            "durationSeconds": 0.18
+          }
+        ]
+      }
+    },
+    "88": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 6.425,
+            "durationSeconds": 0.182
+          }
+        ]
+      }
+    },
+    "3612": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 28.558,
+            "durationSeconds": 0.161
+          }
+        ]
+      }
+    },
+    "3613": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 38.821,
+            "durationSeconds": 0.188
+          }
+        ]
+      }
+    },
+    "3637": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 7.187,
+            "durationSeconds": 0.183
+          }
+        ]
+      }
+    },
+    "3639": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 6.818,
+            "durationSeconds": 0.167
+          }
+        ]
+      }
+    },
+    "3640": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 37.73,
+            "durationSeconds": 0.184
+          }
+        ]
+      }
+    },
+    "3653": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 7.583,
+            "durationSeconds": 0.193
+          }
+        ]
+      }
+    },
+    "3655": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 15.526,
+            "durationSeconds": 0.204
+          }
+        ]
+      }
+    },
+    "3657": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 15.893,
+            "durationSeconds": 0.157
+          }
+        ]
+      }
+    },
+    "3663": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 22.513,
+            "durationSeconds": 0.173
+          }
+        ]
+      }
+    },
+    "3665": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 22.862,
+            "durationSeconds": 0.158
+          }
+        ]
+      }
+    },
+    "3666": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 15.156,
+            "durationSeconds": 0.18
+          }
+        ]
+      }
+    },
+    "3667": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 22.116,
+            "durationSeconds": 0.179
+          }
+        ]
+      }
+    },
+    "3675": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 36.115,
+            "durationSeconds": 0.205
+          }
+        ]
+      }
+    },
+    "3676": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 38.116,
+            "durationSeconds": 0.184
+          }
+        ]
+      }
+    },
+    "3677": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 38.821,
+            "durationSeconds": 0.188
+          }
+        ]
+      }
+    },
+    "57416": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 34.704,
+            "durationSeconds": 0.159
+          }
+        ]
+      }
+    },
+    "57419": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 39.22,
+            "durationSeconds": 0.169
+          }
+        ]
+      }
+    },
+    "57421": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 39.954,
+            "durationSeconds": 0.183
+          }
+        ]
+      }
+    },
+    "57424": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 39.589,
+            "durationSeconds": 0.179
+          }
+        ]
+      }
+    },
+    "60999": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 15.526,
+            "durationSeconds": 0.204
+          }
+        ]
+      }
+    },
+    "61000": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 34.704,
+            "durationSeconds": 0.159
+          }
+        ]
+      }
+    },
+    "61001": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 15.893,
+            "durationSeconds": 0.157
+          }
+        ]
+      }
+    },
+    "61003": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 39.22,
+            "durationSeconds": 0.169
+          }
+        ]
+      }
+    },
+    "61005": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 39.954,
+            "durationSeconds": 0.183
+          }
+        ]
+      }
+    },
+    "61007": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 22.513,
+            "durationSeconds": 0.173
+          }
+        ]
+      }
+    },
+    "61008": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 39.589,
+            "durationSeconds": 0.179
+          }
+        ]
+      }
+    },
+    "61009": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 22.862,
+            "durationSeconds": 0.158
+          }
+        ]
+      }
+    },
+    "61010": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 15.156,
+            "durationSeconds": 0.18
+          }
+        ]
+      }
+    },
+    "61011": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "sound.ogg",
+            "offsetSeconds": 22.116,
+            "durationSeconds": 0.179
+          }
+        ]
+      }
+    }
+  },
+  "checksums": {}
 }

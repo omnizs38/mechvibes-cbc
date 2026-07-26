@@ -48,7 +48,12 @@ The 18 bundled packs currently break down as:
 - **Empty checksums.** Converted configs omit `checksums` (schema default `{}`).
 - **Wire sprite `-up` into keyup.** The v1 sprite `-up` windows become v4 keyup
   layers, restoring the pack authors' clear intent. This IS an audible change vs
-  the current build (these packs now play a release click).
+  the current build (these packs now play a release click). In practice only
+  `cherrymx-black-abs` shipped `-up` entries; the other sprite packs are
+  keydown-only in source.
+- **Fully migrate the pack editor to v4.** The renderer's soundpack editor
+  authored/imported v1 configs; it is reworked to read, preview, and export v4
+  natively (keeping its keydown, one-sample-per-key authoring scope).
 
 ## Part 1 — Convert the 18 configs
 
@@ -103,6 +108,22 @@ manifest with the expected keydown (and now keyup) events.
     branch (`key_define_type` / `defines` / `sound` / `soundup`) is removed.
   - `listReferencedSoundFiles`: keep only the v3/v4 branch.
   - Delete `expandNumberTemplate` and `expandNumberTemplateVariants`.
+  - **Idempotency fix:** empty/absent `author` and `license`, and null/absent
+    `sampleRate`, normalize to their defaults (`''` / `''` / `null`). The load
+    path validates a config and then re-validates the result inside
+    `createAudioManifest`; without this, an author-less bundled pack (which the
+    migration produces) fails on the second pass.
+- **`src/libs/soundpacks/registry.ts`** — drop the dead `1` / `2` entries from
+  `CONFIG_FACTORIES` (validation rejects those versions before dispatch).
+- **`src/renderer/editor/` (pack editor)** — migrate to v4:
+  - `packData.ts`: working state becomes `{ name, mode: 'sprite' | 'files',
+    sound, defines }`; `toV4Config` builds a v4 config (keydown-only, one sample
+    per key, sprite windows or per-key files) and `fromV4Config` reads one back
+    (inferring mode from sample windows). Platform↔standard keycode remapping is
+    preserved. `key_define_type` / `id` / `includes_numpad` are gone.
+  - `EditorApp.tsx`, `Keyboard.tsx`, `ManualList.tsx`: use `mode`
+    (`sprite` / `files`) and the v4 export/import; the sound-file field shows
+    only in `sprite` mode.
 - **`src/audio-engine/manifest-adapter.ts`**
   - Delete `adaptV1`, `adaptV2`, `resolveReferences`, and the
     `expandNumberTemplateVariants` import.

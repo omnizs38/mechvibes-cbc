@@ -5,11 +5,11 @@ import { ManualList } from './ManualList';
 import {
   createPack,
   emptyDefines,
-  fromImported,
+  fromV4Config,
   fs,
-  toExportable,
+  toV4Config,
+  type AuthoringMode,
   type EditMode,
-  type KeyDefineType,
   type PackData,
   type SoundDefinition,
 } from './packData';
@@ -23,7 +23,7 @@ export function EditorApp() {
   const [notice, setNotice] = useState('');
   const importInputRef = useRef<HTMLInputElement | null>(null);
 
-  const exportable = useMemo(() => toExportable(pack), [pack]);
+  const exportable = useMemo(() => toV4Config(pack), [pack]);
   const resultJson = useMemo(() => JSON.stringify(exportable, null, 2), [exportable]);
 
   const saveDefinition = useCallback((keycode: string, value: SoundDefinition) => {
@@ -34,11 +34,11 @@ export function EditorApp() {
     setSelectedKeycode(null);
   }, []);
 
-  const changeKeyDefineType = useCallback((keyDefineType: KeyDefineType) => {
-    // Switching the definition style invalidates every existing mapping.
+  const changeMode = useCallback((mode: AuthoringMode) => {
+    // Switching the authoring style invalidates every existing mapping.
     setPack((previous) => ({
       ...previous,
-      key_define_type: keyDefineType,
+      mode,
       defines: emptyDefines(),
     }));
     setSelectedKeycode(null);
@@ -57,7 +57,7 @@ export function EditorApp() {
       if (raw === null) {
         throw new Error('Cannot read the selected file.');
       }
-      setPack(fromImported(JSON.parse(raw)));
+      setPack(fromV4Config(JSON.parse(raw)));
       setSelectedKeycode(null);
       setNotice(`Imported ${file.name}.`);
     } catch (error) {
@@ -157,39 +157,41 @@ export function EditorApp() {
 
           <div className="field">
             <div className="field-label">
-              <label htmlFor="key-define-mode">Key define mode</label>
+              <label htmlFor="authoring-mode">Key define mode</label>
             </div>
             <select
-              id="key-define-mode"
+              id="authoring-mode"
               className="input"
-              value={pack.key_define_type}
-              onChange={(event) => changeKeyDefineType(event.target.value as KeyDefineType)}
+              value={pack.mode}
+              onChange={(event) => changeMode(event.target.value as AuthoringMode)}
             >
-              <option value="single">Single file (start and length)</option>
-              <option value="multi">Multiple files (one file per key)</option>
+              <option value="sprite">Single file (start and length)</option>
+              <option value="files">Multiple files (one file per key)</option>
             </select>
           </div>
 
-          <div className="field">
-            <div className="field-label">
-              <label htmlFor="single-sound-file">Sound file</label>
-            </div>
-            <input
-              id="single-sound-file"
-              className="input"
-              type="text"
-              placeholder="Sound file name…"
-              value={pack.sound}
-              onChange={(event) =>
-                setPack((previous) => ({ ...previous, sound: event.target.value }))
-              }
-              onBlur={(event) => {
-                if (!event.target.value) {
-                  setPack((previous) => ({ ...previous, sound: 'sound.ogg' }));
+          {pack.mode === 'sprite' ? (
+            <div className="field">
+              <div className="field-label">
+                <label htmlFor="single-sound-file">Sound file</label>
+              </div>
+              <input
+                id="single-sound-file"
+                className="input"
+                type="text"
+                placeholder="Sound file name…"
+                value={pack.sound}
+                onChange={(event) =>
+                  setPack((previous) => ({ ...previous, sound: event.target.value }))
                 }
-              }}
-            />
-          </div>
+                onBlur={(event) => {
+                  if (!event.target.value) {
+                    setPack((previous) => ({ ...previous, sound: 'sound.ogg' }));
+                  }
+                }}
+              />
+            </div>
+          ) : null}
         </div>
       </section>
 

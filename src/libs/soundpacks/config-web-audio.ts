@@ -57,7 +57,8 @@ class WebAudioSoundpackConfig {
   }
 
   async loadInternal(): Promise<void> {
-    this.manifest = createAudioManifest(this.config, this.metadata);
+    // `this.config` was already validated at discovery (see registry).
+    this.manifest = createAudioManifest(this.config, this.metadata, { validate: false });
     this.engine = this.engineFactory();
     await this.engine.loadManifest(this.manifest);
     await this.engine.resume();

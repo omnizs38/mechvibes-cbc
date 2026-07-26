@@ -26,7 +26,7 @@ export function ManualList({ pack, onSave }: Props) {
                   key={`${zone}-${keycode}`}
                 >
                   <span className="manual-key-label">{keyLabels[keycode] ?? keycode}</span>
-                  {pack.key_define_type === 'single' ? (
+                  {pack.mode === 'sprite' ? (
                     <span className="manual-key-inputs">
                       <input
                         className="input"

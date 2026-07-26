@@ -1,16 +1,94 @@
 {
-  "id": "custom-sound-pack-1720300926819",
   "name": "pandas",
-  "key_define_type": "multi",
-  "sound": "GENERIC_R{0-4}.mp3",
-  "soundup": "release/GENERIC.mp3",
-  "defines": {
-    "14": "BACKSPACE.mp3",
-    "14-up": "release/BACKSPACE.mp3",
-    "28": "ENTER.mp3",
-    "28-up": "release/ENTER.mp3",
-    "57": "SPACE.mp3",
-    "57-up": "release/SPACE.mp3"
+  "version": 4,
+  "engine": {
+    "maxVoices": 64,
+    "preload": "all",
+    "cacheBudgetMb": 192,
+    "gain": 1
   },
-  "version": 2
+  "defaults": {
+    "keydown": {
+      "samples": [
+        {
+          "file": "GENERIC_R0.mp3"
+        },
+        {
+          "file": "GENERIC_R1.mp3"
+        },
+        {
+          "file": "GENERIC_R2.mp3"
+        },
+        {
+          "file": "GENERIC_R3.mp3"
+        },
+        {
+          "file": "GENERIC_R4.mp3"
+        }
+      ],
+      "mode": "round-robin"
+    },
+    "keyup": {
+      "samples": [
+        {
+          "file": "release/GENERIC.mp3"
+        }
+      ],
+      "priority": 4
+    }
+  },
+  "keys": {
+    "14": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "BACKSPACE.mp3"
+          }
+        ]
+      },
+      "keyup": {
+        "samples": [
+          {
+            "file": "release/BACKSPACE.mp3"
+          }
+        ],
+        "priority": 4
+      }
+    },
+    "28": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "ENTER.mp3"
+          }
+        ]
+      },
+      "keyup": {
+        "samples": [
+          {
+            "file": "release/ENTER.mp3"
+          }
+        ],
+        "priority": 4
+      }
+    },
+    "57": {
+      "keydown": {
+        "samples": [
+          {
+            "file": "SPACE.mp3"
+          }
+        ]
+      },
+      "keyup": {
+        "samples": [
+          {
+            "file": "release/SPACE.mp3"
+          }
+        ],
+        "priority": 4
+      }
+    }
+  },
+  "checksums": {}
 }
