@@ -231,7 +231,7 @@ test('remaps Windows key aliases without emitting empty definitions', () => {
 
 test('validates v3 layers and adapts them to the unified audio manifest', () => {
   const config = validateSoundpackConfig(validV3());
-  assert.equal(config.version, 3);
+  assert.equal(config.version, 4); // v3 is converted to v4 on validation
   assert.equal(config.engine.maxVoices, 64);
   assert.equal(config.defaults.keydown.samples.length, 2);
   const manifest = createAudioManifest(config, {
@@ -240,7 +240,7 @@ test('validates v3 layers and adapts them to the unified audio manifest', () => 
   }, {
     getFile: (_packPath: string, file: string) => `data:audio/mock,${file}`,
   });
-  assert.equal(manifest.version, 3);
+  assert.equal(manifest.version, 4); // Modern v3 becomes v4
   assert.equal(manifest.events['keydown:30'].samples.length, 2);
   assert.equal(manifest.events['keyup:30'].samples[0].file, 'release/a.flac');
   assert.throws(() => validateSoundpackConfig(validV3({
@@ -357,7 +357,7 @@ test('rejects unsafe or malformed soundpack configuration', () => {
     /unsafe/,
   );
   assert.throws(() => validateSoundpackConfig(validV4({ version: 99 })), /Unsupported/);
-  assert.throws(() => validateSoundpackConfig(validV4({ version: 1 })), /Unsupported/);
+  assert.throws(() => validateSoundpackConfig(validV4({ version: 1, name: 'bad', key_define_type: 'bad' })), /Invalid v1/); // v1 is now supported but must be valid format
   assert.throws(() => validateSoundpackConfig(validV3({ keys: { key: { keydown: { samples: ['a.wav'] } } } })), /invalid/);
   assert.throws(
     () =>

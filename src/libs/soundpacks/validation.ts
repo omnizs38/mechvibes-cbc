@@ -1,8 +1,12 @@
 'use strict';
 
 import path from 'path';
+import { isLegacyV1Config, type LegacyV1Config } from './config-v1';
+import { isLegacyV2Config, type LegacyV2Config } from './config-v2';
+import { isLegacyV3Config, type LegacyV3Config } from './config-v3-legacy';
+import { convertV1ToV4, convertV2ToV4, convertV3LegacyToV4 } from './config-converter';
 
-const SUPPORTED_VERSIONS: ReadonlySet<number> = new Set([3, 4]);
+const SUPPORTED_VERSIONS: ReadonlySet<number> = new Set([1, 2, 3, 4]);
 export const SUPPORTED_AUDIO_EXTENSIONS: ReadonlySet<string> = new Set([
   '.aac',
   '.flac',
@@ -327,11 +331,37 @@ export function validateSoundpackConfig(config: unknown): ValidatedSoundpackConf
     );
   }
 
-  const name = requireNonEmptyString(config['name'], 'name');
+  // Convert legacy formats (v1, v2, v3-legacy) to modern v4
+  let normalizedConfig = config as AnyRecord;
+  
+  if (version === 1) {
+    if (!isLegacyV1Config(config)) {
+      throw new SoundpackValidationError('Invalid v1 soundpack config format.');
+    }
+    // Convert v1 → v4
+    normalizedConfig = convertV1ToV4(config as LegacyV1Config);
+  } else if (version === 2) {
+    if (!isLegacyV2Config(config)) {
+      throw new SoundpackValidationError('Invalid v2 soundpack config format.');
+    }
+    // Convert v2 → v4
+    normalizedConfig = convertV2ToV4(config as LegacyV2Config);
+  } else if (version === 3) {
+    // Check if it's legacy v3 or modern v3
+    if (isLegacyV3Config(config)) {
+      // Legacy v3 (from original mechvibes with clips/cycles)
+      normalizedConfig = convertV3LegacyToV4(config as LegacyV3Config);
+    }
+    // Modern v3 (same as v4 in mechvibes-cbc) will pass through to validateModernConfig
+  }
+
+  const name = requireNonEmptyString(normalizedConfig['name'], 'name');
   if (name.length > MAX_NAME_LENGTH) {
     throw new SoundpackValidationError(`name must not exceed ${MAX_NAME_LENGTH} characters.`);
   }
-  return validateModernConfig(config, name, version as 3 | 4);
+
+  // All converted configs are now in v4 format
+  return validateModernConfig(normalizedConfig, name, 4);
 }
 
 export function listReferencedSoundFiles(config: unknown): string[] {
