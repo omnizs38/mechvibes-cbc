@@ -55,7 +55,7 @@ Official website: **[mechvibes-cbc.pages.dev](https://mechvibes-cbc.pages.dev/)*
 
 ---
 
-## System Requirements / Системные требования
+## System Requirements
 
 This project runs natively across major platforms. Below are the minimal OS and runtime version requirements:
 
