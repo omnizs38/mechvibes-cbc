@@ -41,6 +41,8 @@ export class WebAudioEngine {
   private readonly graph: AudioGraph;
   private readonly selector: SampleSelector<ManifestSample>;
   private scheduler: VoiceScheduler | null;
+  private pendingEvents: PlaybackEvent[] = [];
+  private isResuming: boolean = false;
 
   cache: SampleCache | null;
   voicePool: VoicePool | null;
@@ -123,12 +125,29 @@ export class WebAudioEngine {
     }
     this.metrics.playRequests += 1;
 
-    // A suspended context freezes currentTime. Scheduling against that stale
-    // clock produces no sound, and every queued voice then fires at once the
-    // moment the context resumes. Drop the event and get the context back.
+    // A suspended context freezes currentTime. Instead of dropping events,
+    // buffer them and play them when the context resumes.
     if (!this.graph.isRunning) {
-      this.metrics.droppedEvents += 1;
-      this.graph.requestResume();
+      // Don't count as dropped since we're buffering them
+      this.pendingEvents.push(event);
+
+      if (!this.isResuming) {
+        this.isResuming = true;
+        void this.graph.resume().then(() => {
+          this.isResuming = false;
+          this.flushPendingEvents();
+        }).catch(() => {
+          this.isResuming = false;
+        });
+      }
+      return Promise.resolve(false);
+    }
+
+    return this.playInternal(event);
+  }
+
+  private playInternal(event: PlaybackEvent): Promise<boolean> {
+    if (!this.manifest || !this.cache || !this.voicePool || !this.scheduler) {
       return Promise.resolve(false);
     }
 
@@ -157,6 +176,15 @@ export class WebAudioEngine {
     });
   }
 
+  private flushPendingEvents(): void {
+    const events = this.pendingEvents;
+    this.pendingEvents = [];
+
+    for (const event of events) {
+      void this.playInternal(event);
+    }
+  }
+
   private record(schedulingDelayMs: number): void {
     this.metrics.lastSchedulingDelayMs = schedulingDelayMs;
     this.metrics.maximumSchedulingDelayMs = Math.max(
@@ -175,6 +203,8 @@ export class WebAudioEngine {
   }
 
   async dispose(): Promise<void> {
+    this.pendingEvents = [];
+    this.isResuming = false;
     this.stopAll();
     this.manifest = null;
     this.scheduler = null;

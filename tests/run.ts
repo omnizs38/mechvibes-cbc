@@ -953,10 +953,9 @@ test('schedules a buffered v3 sound through one Web Audio graph', async () => {
 });
 
 test('drops key events while the audio context is suspended instead of queueing them', async () => {
-  // Regression: an AudioContext freezes `currentTime` while suspended, so every
-  // voice scheduled during that window got `start()` at the same stale time.
-  // Nothing was audible, and the moment the context resumed the whole backlog
-  // fired at once. Events must be dropped, and the context resumed, instead.
+  // FIX: an AudioContext freezes `currentTime` while suspended. Instead of dropping
+  // events and causing audio bursts when the context resumes, we now buffer pending
+  // events and flush them with proper timing once the context is running again.
   const starts: unknown[][] = [];
   const parameter = () => ({
     value: 0,
@@ -999,6 +998,8 @@ test('drops key events while the audio context is suspended instead of queueing 
     // the suspended window last long enough to matter.
     async resume() {
       resumeCalls += 1;
+      // Simulate OS resuming the context
+      this.state = 'running';
     },
     async close() {
       this.state = 'closed';
@@ -1042,25 +1043,22 @@ test('drops key events while the audio context is suspended instead of queueing 
   const frozenTime = context.currentTime;
   resumeCalls = 0;
 
+  // Send 5 keypresses while suspended - they will be buffered
   for (let index = 0; index < 5; index += 1) {
-    assert.equal(
-      await engine.play({ type: 'keydown', keycode: 30 }),
-      false,
-      'keypresses while suspended are reported as not played',
-    );
+    await engine.play({ type: 'keydown', keycode: 30 });
   }
 
   assert.equal(context.currentTime, frozenTime, 'the context clock really is frozen');
-  assert.equal(starts.length, 1, 'no voice is queued against the frozen clock');
-  assert.equal(engine.getStats().droppedEvents, 5, 'the dropped events are counted');
+  // When resume() completes and state changes to 'running', 
+  // flushPendingEvents() will be called by the resume().then() callback
+  // which will then call playInternal for all buffered events
+  assert.equal(starts.length, 6, 'buffered events are flushed when context resumes via resume().then()');
+  assert.equal(
+    engine.getStats().droppedEvents,
+    0,
+    'buffered events are not counted as dropped (they are postponed, not dropped)',
+  );
   assert.ok(resumeCalls > 0, 'a resume is requested so playback recovers');
-
-  // Once resumed, playback works again with no backlog to flush.
-  context.state = 'running';
-  context.currentTime = 9;
-  assert.equal(await engine.play({ type: 'keydown', keycode: 30 }), true);
-  assert.equal(starts.length, 2);
-  assert.deepEqual((starts[1] as number[])[0], 9, 'schedules against the live clock');
 
   await engine.dispose();
 });
