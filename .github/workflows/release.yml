@@ -21,10 +21,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Check out tagged source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Use supported Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -108,10 +108,10 @@ jobs:
               dist/*.yml
     steps:
       - name: Check out tagged source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Use supported Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -161,7 +161,7 @@ jobs:
           npm sbom --sbom-format cyclonedx > dist/sbom.cdx.json
 
       - name: Upload compiled OS release assets
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact-name }}
           path: |
@@ -184,10 +184,10 @@ jobs:
       # package-lock.json in the workspace, and actions/checkout cleans the
       # working directory, so running it after the downloads would wipe them.
       - name: Check out tagged source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Use supported Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -205,19 +205,19 @@ jobs:
       # (no implicit merging; artifacts are immutable). The per-OS SHA256SUMS
       # and SBOM files collide by name but are deleted and regenerated below.
       - name: Download Windows assets
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: windows-release-assets
           path: dist-merged
 
       - name: Download macOS assets
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: macos-release-assets
           path: dist-merged
 
       - name: Download Linux assets
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: linux-release-assets
           path: dist-merged
