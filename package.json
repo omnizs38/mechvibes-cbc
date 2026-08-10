@@ -135,6 +135,6 @@
     "electron-builder": "^26.15.7",
     "prettier": "^3.9.6",
     "typescript": "^7.0.2",
-    "vite": "^8.2.0"
+    "vite": "^8.2.1"
   }
 }
