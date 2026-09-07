@@ -312,11 +312,18 @@ test('local source reader rejects oversized files before allocating payload', as
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mechvibes-large-'));
   try {
     const target = path.join(root, 'large.wav');
-    fs.closeSync(fs.openSync(target, 'w'));
-    fs.truncateSync(target, 64 * 1024 * 1024 + 1);
-    await assert.rejects(ReadSoundpackSource(pathToFileURL(target).href), /byte limit/);
-    fs.writeFileSync(target, 'audio');
-    assert.deepEqual(await ReadSoundpackSource(pathToFileURL(target).href), Buffer.from('audio'));
+    // Keep mutations bound to the same exclusively created file. Reopening
+    // its path after the reader's stat check creates a check/use race.
+    const descriptor = fs.openSync(target, 'wx+');
+    try {
+      fs.ftruncateSync(descriptor, 64 * 1024 * 1024 + 1);
+      await assert.rejects(ReadSoundpackSource(pathToFileURL(target).href), /byte limit/);
+      fs.ftruncateSync(descriptor, 0);
+      fs.writeSync(descriptor, 'audio', 0, 'utf8');
+      assert.deepEqual(await ReadSoundpackSource(pathToFileURL(target).href), Buffer.from('audio'));
+    } finally {
+      fs.closeSync(descriptor);
+    }
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
