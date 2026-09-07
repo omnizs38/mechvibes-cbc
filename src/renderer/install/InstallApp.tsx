@@ -2,9 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { getGlobal, ipcRenderer, nodePath, nodeRequire, onIpc, requireFromSrc } from '../shared/electron';
 
 const fs = nodeRequire('fs-extra');
-const { listReferencedSoundFiles, validateSoundpackConfig } = requireFromSrc(
-  'libs/soundpacks/validation',
-);
+const { listReferencedSoundFiles, validateSoundpackConfig } = requireFromSrc('libs/soundpacks/validation');
 const {
   MAX_FILE_BYTES,
   commitDirectoryReplacement,
@@ -58,33 +56,49 @@ function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-async function fetchWithTimeout<T>(url: string, consume: (response: Response) => Promise<T>): Promise<T> {
+async function fetchWithTimeout<T>(
+  url: string,
+  consume: (response: Response) => Promise<T>,
+  signal?: AbortSignal,
+): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
-    const response = await fetch(url, { signal: controller.signal, cache: 'no-store' });
+    const response = await fetch(url, {
+      signal: signal ? AbortSignal.any([signal, controller.signal]) : controller.signal,
+      cache: 'no-store',
+    });
     return await consume(response);
   } finally {
     clearTimeout(timer);
   }
 }
 
-async function downloadFile(url: string, destination: string, currentTotal: number): Promise<number> {
-  return fetchWithTimeout(url, async (response) => {
-    if (!response.ok) {
-      throw new Error(`Download failed (${statusCode(response)}).`);
-    }
+async function downloadFile(
+  url: string,
+  destination: string,
+  currentTotal: number,
+  signal: AbortSignal,
+): Promise<number> {
+  return fetchWithTimeout(
+    url,
+    async (response) => {
+      if (!response.ok) {
+        throw new Error(`Download failed (${statusCode(response)}).`);
+      }
 
-    const advertisedSize = parseContentLength(response);
-    if (advertisedSize !== null) {
-      enforceDownloadSize({ fileBytes: advertisedSize, totalBytes: currentTotal + advertisedSize });
-    }
-    const buffer = await readResponseBuffer(response, MAX_FILE_BYTES);
-    enforceDownloadSize({ fileBytes: buffer.length, totalBytes: currentTotal + buffer.length });
-    fs.ensureDirSync(nodePath.dirname(destination));
-    fs.writeFileSync(destination, buffer, { flag: 'wx' });
-    return buffer.length as number;
-  });
+      const advertisedSize = parseContentLength(response);
+      if (advertisedSize !== null) {
+        enforceDownloadSize({ fileBytes: advertisedSize, totalBytes: currentTotal + advertisedSize });
+      }
+      const buffer = await readResponseBuffer(response, MAX_FILE_BYTES);
+      enforceDownloadSize({ fileBytes: buffer.length, totalBytes: currentTotal + buffer.length });
+      fs.ensureDirSync(nodePath.dirname(destination));
+      fs.writeFileSync(destination, buffer, { flag: 'wx' });
+      return buffer.length as number;
+    },
+    signal,
+  );
 }
 
 function validateDownloadedPack(directory: string): void {
@@ -118,6 +132,8 @@ export function InstallApp() {
   const [error, setError] = useState('');
   const [percent, setPercent] = useState(0);
   const packUrlRef = useRef<string | null>(null);
+  const installController = useRef<AbortController | null>(null);
+  useEffect(() => () => installController.current?.abort(), []);
 
   // The installer window resizes itself to fit its content.
   useLayoutEffect(() => {
@@ -163,29 +179,30 @@ export function InstallApp() {
 
   const install = useCallback(async () => {
     const packUrl = packUrlRef.current;
-    if (!manifest || !packUrl) return;
+    if (!manifest || !packUrl || installController.current) return;
+    const controller = new AbortController();
+    installController.current = controller;
 
     setPhase('installing');
     setError('');
     setPercent(0);
 
-    const tempDirectory = nodePath.join(
-      CUSTOM_PACKS_DIR,
-      `.install-${manifest.folder}-${Date.now()}`,
-    );
+    const tempDirectory = nodePath.join(CUSTOM_PACKS_DIR, `.install-${manifest.folder}-${crypto.randomUUID()}`);
     let totalBytes = 0;
 
     try {
       fs.ensureDirSync(tempDirectory);
       for (let index = 0; index < manifest.files.length; index += 1) {
+        controller.signal.throwIfAborted();
         const file = manifest.files[index] as string;
         setStatusText(`Downloading ${file}\u2026`);
         const destination = nodePath.join(tempDirectory, ...file.split('/'));
         const fileUrl = `${packUrl}/${file.split('/').map(encodeURIComponent).join('/')}`;
-        totalBytes += await downloadFile(fileUrl, destination, totalBytes);
+        totalBytes += await downloadFile(fileUrl, destination, totalBytes, controller.signal);
         setPercent(((index + 1) / manifest.files.length) * 100);
       }
 
+      controller.signal.throwIfAborted();
       setStatusText('Validating soundpack\u2026');
       validateDownloadedPack(tempDirectory);
       commitInstallation(tempDirectory, manifest.folder);
@@ -194,8 +211,10 @@ export function InstallApp() {
       ipcRenderer.send('installed', manifest.folder);
     } catch (caught) {
       fs.removeSync(tempDirectory);
-      setError(message(caught));
+      setError(controller.signal.aborted ? 'Installation canceled. No soundpack was replaced.' : message(caught));
       setPhase('confirm');
+    } finally {
+      installController.current = null;
     }
   }, [manifest]);
 
@@ -203,9 +222,7 @@ export function InstallApp() {
     <div className="installer">
       <header className="installer-head">
         <span className="installer-kicker">Mechvibes</span>
-        <h1 className="installer-title">
-          {phase === 'error' ? 'Installation failed' : 'Install soundpack'}
-        </h1>
+        <h1 className="installer-title">{phase === 'error' ? 'Installation failed' : 'Install soundpack'}</h1>
       </header>
 
       {manifest ? (
@@ -253,6 +270,12 @@ export function InstallApp() {
             <div className="progress-bar" style={{ width: `${percent}%` }} />
           </div>
         </div>
+      ) : null}
+
+      {phase === 'installing' ? (
+        <button type="button" className="btn" onClick={() => installController.current?.abort()}>
+          Cancel installation
+        </button>
       ) : null}
 
       {phase === 'done' ? (

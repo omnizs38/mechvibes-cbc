@@ -1,3 +1,4 @@
+import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { createRoot } from 'react-dom/client';
 import '../styles/base.css';
 import './install.css';
@@ -11,4 +12,8 @@ if (!container) {
   throw new Error('Renderer root element is missing.');
 }
 
-createRoot(container).render(<InstallApp />);
+createRoot(container).render(
+  <ErrorBoundary>
+    <InstallApp />
+  </ErrorBoundary>,
+);

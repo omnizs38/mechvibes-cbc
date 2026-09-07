@@ -2,7 +2,7 @@
   "name": "mechvibes",
   "productName": "Mechvibes",
   "version": "2.5.3",
-  "description": "Low-latency mechanical keyboard sound engine for Windows.",
+  "description": "Low-latency mechanical keyboard sounds for Windows, macOS and Linux.",
   "repository": "https://github.com/omnizs38/mechvibes-cbc",
   "main": "src/main.js",
   "scripts": {
@@ -15,8 +15,8 @@
     "lint": "npm run typecheck",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,html}\" \"tools/**/*.ts\" \"tests/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,html}\" \"tools/**/*.ts\" \"tests/**/*.ts\"",
-    "diagnose": "tsc tools/diagnose.ts --outDir dist --module commonjs && node dist/tools/diagnose.js",
-    "build:soundpack": "tsc tools/soundpack-builder-cli.ts tools/soundpack-scanner.ts tools/soundpack-config-generator.ts --module commonjs --ignoreConfig && node tools/soundpack-builder-cli.js",
+    "diagnose": "npm run build:main && node tools/diagnose.js",
+    "build:soundpack": "npm run build:main && node tools/soundpack-builder-cli.js",
     "build:all": "npm run build:main && npm run build:renderer && electron-builder -wml",
     "build:win": "npm run build:main && npm run build:renderer && electron-builder -w",
     "build:mac": "npm run build:main && npm run build:renderer && electron-builder -m",
@@ -24,9 +24,10 @@
     "build:win:dir": "npm run build:main && npm run build:renderer && electron-builder --win --x64 --dir --publish never",
     "build:clean": "npm run build:main && node tools/clean-dist.js",
     "check": "npm run build:main && node tools/check-syntax.js",
-    "test": "npm run build:main && node tests/run.js",
+    "test": "npm run build:main && npm run test:unit",
     "benchmark:audio": "npm run build:main && node tools/audio-benchmark.js",
-    "verify": "npm run check && npm test && npm run typecheck"
+    "verify": "npm run build:main && node tools/check-syntax.js && npm run test:unit && npm run typecheck && npm run build:renderer && node tools/check-renderer.js && npm run build:web",
+    "test:unit": "node tests/run.js && node --test tests/modernization.test.js"
   },
   "engines": {
     "node": ">=22"
@@ -127,12 +128,12 @@
     "@types/adm-zip": "^0.5.7",
     "@types/fs-extra": "^11.0.4",
     "@types/mime-types": "^3.0.1",
-    "@types/node": "^26.4.1",
+    "@types/node": "^26.5.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
-    "electron": "^43.2.0",
-    "electron-builder": "^26.16.0",
+    "electron": "^43.6.0",
+    "electron-builder": "^26.16.1",
     "prettier": "^3.9.6",
     "typescript": "^7.0.2",
     "vite": "^8.2.2"

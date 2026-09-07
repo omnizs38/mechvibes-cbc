@@ -38,7 +38,9 @@ export function getGlobal<T = unknown>(name: string): T {
 }
 
 export function openExternal(url: string): void {
-  void shell.openExternal(url);
+  void ipcRenderer.invoke('open-external', url).catch((error: unknown) => {
+    log.warn(`Could not open link: ${String(error)}`);
+  });
 }
 
 export type LogLevel = 'silly' | 'debug' | 'verbose' | 'info' | 'warn' | 'error';

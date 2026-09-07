@@ -1,3 +1,4 @@
+import { ErrorBoundary } from '../shared/ErrorBoundary';
 import { createRoot } from 'react-dom/client';
 import '../styles/base.css';
 import './app.css';
@@ -10,4 +11,8 @@ if (!container) {
 
 // StrictMode is intentionally omitted: the audio engine and the soundpack
 // manager are single-instance side effects that must not be mounted twice.
-createRoot(container).render(<App />);
+createRoot(container).render(
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>,
+);

@@ -46,7 +46,7 @@ export function DebugApp() {
           <span className="switch-text">
             <span className="switch-title">Remote debugging</span>
             <span className="switch-sub">
-              Please do not enable this unless you have been asked to.
+              Opt in only for a support session. Sends your hostname, OS username, platform and diagnostic logs to beta.mechvibes.com. The choice is saved until you turn it off.
             </span>
           </span>
           <input

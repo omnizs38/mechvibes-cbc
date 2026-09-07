@@ -1,5 +1,7 @@
 'use strict';
 
+import { readResponseBuffer } from '../utils/installer';
+
 export const DEFAULT_CACHE_BUDGET_BYTES = 192 * 1024 * 1024;
 export const MAX_SAMPLE_BYTES = 64 * 1024 * 1024;
 
@@ -16,6 +18,7 @@ export interface DecodingContext {
 export interface SampleResponse {
   ok?: boolean;
   headers?: { get(name: string): string | null } | undefined;
+  body?: { getReader?: () => ReadableStreamDefaultReader<Uint8Array> } | null;
   arrayBuffer(): Promise<ArrayBuffer>;
 }
 
@@ -38,6 +41,11 @@ export interface SampleCacheStats {
   pending: number;
   totalBytes: number;
   budgetBytes: number;
+}
+
+interface PendingLoad {
+  promise: Promise<DecodedBuffer>;
+  pinned: boolean;
 }
 
 interface CacheEntry {
@@ -70,8 +78,9 @@ export class SampleCache {
   readonly maxSampleBytes: number;
   private readonly now: () => number;
   private readonly entries: Map<string, CacheEntry>;
-  private readonly pending: Map<string, Promise<DecodedBuffer>>;
+  private readonly pending: Map<string, PendingLoad>;
   totalBytes: number;
+  private generation = 0;
 
   constructor({
     context,
@@ -111,16 +120,22 @@ export class SampleCache {
       return cached.buffer;
     }
     const inFlight = this.pending.get(source);
-    if (inFlight) return inFlight;
+    if (inFlight) {
+      inFlight.pinned ||= pinned;
+      return inFlight.promise;
+    }
 
-    const loading = this.loadInternal(source, pinned).finally(() => {
-      this.pending.delete(source);
+    // Identity, not just the source key, prevents a cleared load from deleting
+    // or repopulating a newer request for the same sample.
+    const request: PendingLoad = { pinned, promise: Promise.resolve(null as unknown as DecodedBuffer) };
+    request.promise = this.loadInternal(source, request).finally(() => {
+      if (this.pending.get(source) === request) this.pending.delete(source);
     });
-    this.pending.set(source, loading);
-    return loading;
+    this.pending.set(source, request);
+    return request.promise;
   }
 
-  async loadInternal(source: string, pinned: boolean): Promise<DecodedBuffer> {
+  private async loadInternal(source: string, request: PendingLoad): Promise<DecodedBuffer> {
     let bytes: ArrayBuffer;
     const localBuffer = await this.readSourceImpl(source);
     if (localBuffer !== null && localBuffer !== undefined) {
@@ -136,21 +151,16 @@ export class SampleCache {
       if (!response || !response.ok) {
         throw new Error(`Audio sample request failed for ${source}.`);
       }
-      const advertisedSize = Number(response.headers && response.headers.get('content-length'));
-      if (Number.isFinite(advertisedSize) && advertisedSize > this.maxSampleBytes) {
-        throw new Error(`Audio sample exceeds the ${this.maxSampleBytes} byte limit.`);
-      }
-      bytes = await response.arrayBuffer();
-      if (bytes.byteLength > this.maxSampleBytes) {
-        throw new Error(`Audio sample exceeds the ${this.maxSampleBytes} byte limit.`);
-      }
+      const data = await readResponseBuffer(response, this.maxSampleBytes);
+      bytes = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer;
     }
     const buffer = await this.context.decodeAudioData(bytes.slice(0));
+    if (this.pending.get(source) !== request) return buffer;
     const decodedBytes = estimateAudioBufferBytes(buffer);
     this.entries.set(source, {
       buffer,
       bytes: decodedBytes,
-      pinned,
+      pinned: request.pinned,
       lastUsed: this.now(),
     });
     this.totalBytes += decodedBytes;
@@ -162,7 +172,19 @@ export class SampleCache {
     sources: Iterable<string>,
     options: { pinned?: boolean } = {},
   ): Promise<DecodedBuffer[]> {
-    return Promise.all([...new Set(sources)].map((source) => this.load(source, options)));
+    const generation = this.generation;
+    const unique = [...new Set(sources)];
+    const buffers: DecodedBuffer[] = new Array(unique.length);
+    let cursor = 0;
+    // Bound simultaneous file reads and decoding, while preserving result order.
+    await Promise.all(Array.from({ length: Math.min(4, unique.length) }, async () => {
+      while (cursor < unique.length) {
+        if (this.generation !== generation) throw new Error('Sample preload was cleared.');
+        const index = cursor++;
+        buffers[index] = await this.load(unique[index], options);
+      }
+    }));
+    return buffers;
   }
 
   evictToBudget(): void {
@@ -178,6 +200,10 @@ export class SampleCache {
   }
 
   clear({ includePinned = true }: { includePinned?: boolean } = {}): void {
+    this.generation += 1;
+    for (const [source, request] of this.pending) {
+      if (includePinned || !request.pinned) this.pending.delete(source);
+    }
     if (includePinned) {
       this.entries.clear();
       this.totalBytes = 0;

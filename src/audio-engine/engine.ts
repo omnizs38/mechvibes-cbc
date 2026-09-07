@@ -41,7 +41,6 @@ export class WebAudioEngine {
   private readonly graph: AudioGraph;
   private readonly selector: SampleSelector<ManifestSample>;
   private scheduler: VoiceScheduler | null;
-  private pendingEvents: PlaybackEvent[] = [];
   private isResuming: boolean = false;
 
   cache: SampleCache | null;
@@ -125,17 +124,15 @@ export class WebAudioEngine {
     }
     this.metrics.playRequests += 1;
 
-    // A suspended context freezes currentTime. Instead of dropping events,
-    // buffer them and play them when the context resumes.
+    // A suspended context freezes currentTime. Drop stale input instead of
+    // building an unbounded queue and replaying a burst after resume.
     if (!this.graph.isRunning) {
-      // Don't count as dropped since we're buffering them
-      this.pendingEvents.push(event);
+      this.metrics.droppedEvents += 1;
 
       if (!this.isResuming) {
         this.isResuming = true;
         void this.graph.resume().then(() => {
           this.isResuming = false;
-          this.flushPendingEvents();
         }).catch(() => {
           this.isResuming = false;
         });
@@ -169,20 +166,12 @@ export class WebAudioEngine {
       return Promise.resolve(true);
     }
     this.metrics.cacheMisses += 1;
+    const scheduler = this.scheduler;
     return this.cache.load(sample.source).then((buffer) => {
-      if (!this.scheduler) return false;
+      if (this.scheduler !== scheduler) return false;
       this.record(this.scheduler.schedule(buffer, sample, layer, event));
       return true;
     });
-  }
-
-  private flushPendingEvents(): void {
-    const events = this.pendingEvents;
-    this.pendingEvents = [];
-
-    for (const event of events) {
-      void this.playInternal(event);
-    }
   }
 
   private record(schedulingDelayMs: number): void {
@@ -203,7 +192,6 @@ export class WebAudioEngine {
   }
 
   async dispose(): Promise<void> {
-    this.pendingEvents = [];
     this.isResuming = false;
     this.stopAll();
     this.manifest = null;

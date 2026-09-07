@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import { validateSoundpackConfig } from './validation';
 import type { ValidatedSoundpackConfig } from './validation';
+import { MAX_CONFIG_BYTES } from './file-manager';
 
 export interface SoundpackMetadata {
   pack_id: string;
@@ -59,8 +60,9 @@ export function listSoundpackCandidates(rootDirectory: string): string[] {
     .readdirSync(rootDirectory, { withFileTypes: true })
     .filter(
       (entry) =>
-        entry.isDirectory() ||
-        (entry.isFile() && path.extname(entry.name).toLowerCase() === '.zip'),
+        !entry.name.startsWith('.') && !/\.(?:backup|import)-/.test(entry.name) &&
+        (entry.isDirectory() ||
+        (entry.isFile() && path.extname(entry.name).toLowerCase() === '.zip')),
     )
     .map((entry) => path.join(rootDirectory, entry.name))
     .sort((left, right) => path.basename(left).localeCompare(path.basename(right)));
@@ -79,6 +81,14 @@ export function readSoundpackConfig(candidatePath: string): unknown {
   const configPath = path.join(candidatePath, 'config.json');
   if (!fs.existsSync(configPath)) {
     throw new Error('Soundpack folder does not contain config.json.');
+  }
+  const stat = fs.statSync(configPath);
+  if (!stat.isFile() || stat.size > MAX_CONFIG_BYTES) {
+    throw new Error(`Soundpack config exceeds the ${MAX_CONFIG_BYTES} byte limit.`);
+  }
+  const root = fs.realpathSync(candidatePath);
+  if (!fs.realpathSync(configPath).startsWith(`${root}${path.sep}`)) {
+    throw new Error('Soundpack config resolves outside the soundpack folder.');
   }
   return JSON.parse(fs.readFileSync(configPath, 'utf8'));
 }
