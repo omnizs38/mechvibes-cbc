@@ -79,18 +79,42 @@ export function readSoundpackConfig(candidatePath: string): unknown {
   }
 
   const configPath = path.join(candidatePath, 'config.json');
-  if (!fs.existsSync(configPath)) {
-    throw new Error('Soundpack folder does not contain config.json.');
-  }
-  const stat = fs.statSync(configPath);
-  if (!stat.isFile() || stat.size > MAX_CONFIG_BYTES) {
-    throw new Error(`Soundpack config exceeds the ${MAX_CONFIG_BYTES} byte limit.`);
-  }
   const root = fs.realpathSync(candidatePath);
-  if (!fs.realpathSync(configPath).startsWith(`${root}${path.sep}`)) {
+  let resolvedConfig: string;
+  try {
+    resolvedConfig = fs.realpathSync(configPath);
+  } catch (error) {
+    if (error.code === 'ENOENT') throw new Error('Soundpack folder does not contain config.json.');
+    throw error;
+  }
+  if (!resolvedConfig.startsWith(`${root}${path.sep}`)) {
     throw new Error('Soundpack config resolves outside the soundpack folder.');
   }
-  return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+
+  // Check and read the same open file, not a path that can be replaced between
+  // stat and read. Refuse a last-component symlink where the OS supports it.
+  const descriptor = fs.openSync(resolvedConfig, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0));
+  try {
+    const stat = fs.fstatSync(descriptor);
+    if (!stat.isFile() || stat.size > MAX_CONFIG_BYTES) {
+      throw new Error(`Soundpack config exceeds the ${MAX_CONFIG_BYTES} byte limit.`);
+    }
+    // A file can grow after fstat. Never allocate/read beyond the limit plus
+    // one sentinel byte, even if the advertised size was originally smaller.
+    const buffer = Buffer.alloc(MAX_CONFIG_BYTES + 1);
+    let total = 0;
+    while (total < buffer.length) {
+      const bytesRead = fs.readSync(descriptor, buffer, total, buffer.length - total, null);
+      if (bytesRead === 0) break;
+      total += bytesRead;
+    }
+    if (total > MAX_CONFIG_BYTES) {
+      throw new Error(`Soundpack config exceeds the ${MAX_CONFIG_BYTES} byte limit.`);
+    }
+    return JSON.parse(buffer.toString('utf8', 0, total));
+  } finally {
+    fs.closeSync(descriptor);
+  }
 }
 
 export function buildMetadata(candidatePath: string, isCustom: boolean): SoundpackMetadata {

@@ -64,7 +64,7 @@ npm audit --audit-level=high
 npm run diagnose
 ```
 
-There are 43 existing tests plus 21 focused regression tests in this change.
+There are 43 existing tests plus 24 focused regression tests in this change.
 The benchmark uses a simulated AudioContext and measures JavaScript scheduling
 cost only. It does not measure real end-to-end sound latency. Renderer asset
 checks are static, not a GUI integration test.

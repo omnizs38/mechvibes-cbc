@@ -298,6 +298,41 @@ test('folder config has a one-MiB read limit', () =>
     assert.throws(() => readSoundpackConfig(root), /byte limit/);
   }));
 
+test('folder config reads valid JSON through its checked descriptor', () =>
+  temporary((root) => {
+    fs.writeFileSync(path.join(root, 'config.json'), JSON.stringify({ name: 'Valid pack' }));
+    assert.deepEqual(readSoundpackConfig(root), { name: 'Valid pack' });
+  }));
+
+test('folder config enforces its byte limit even when fstat reports an earlier smaller size', (t) =>
+  temporary((root) => {
+    fs.writeFileSync(path.join(root, 'config.json'), ' '.repeat(1024 * 1024 + 1));
+    const fstat = fs.fstatSync;
+    // Model growth after metadata was captured without modifying a checked path.
+    const mocked = t.mock.method(fs, 'fstatSync', (descriptor: number) =>
+      Object.assign(fstat(descriptor), { size: 2 }),
+    );
+    try {
+      assert.throws(() => readSoundpackConfig(root), /byte limit/);
+      assert.equal(mocked.mock.callCount(), 1);
+    } finally {
+      mocked.mock.restore();
+    }
+  }));
+
+test('folder config closes its descriptor when JSON parsing fails', (t) =>
+  temporary((root) => {
+    fs.writeFileSync(path.join(root, 'config.json'), '{broken');
+    const close = fs.closeSync;
+    const mocked = t.mock.method(fs, 'closeSync', (descriptor: number) => close(descriptor));
+    try {
+      assert.throws(() => readSoundpackConfig(root), SyntaxError);
+      assert.equal(mocked.mock.callCount(), 1);
+    } finally {
+      mocked.mock.restore();
+    }
+  }));
+
 test('discovery ignores hidden and interrupted transaction directories', () =>
   temporary((root) => {
     for (const name of ['normal', '.install-pack', 'pack.backup-123']) fs.mkdirSync(path.join(root, name));
