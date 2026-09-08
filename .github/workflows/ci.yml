@@ -21,9 +21,13 @@ permissions:
 
 jobs:
   quality:
-    name: Syntax, soundpacks, and tests
+    name: Verify on Node ${{ matrix.node }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ["22.22.0", "24"]
     permissions:
       contents: read
     steps:
@@ -32,12 +36,15 @@ jobs:
       - name: Use supported Node.js
         uses: actions/setup-node@v7
         with:
-          node-version-file: .nvmrc
+          node-version: ${{ matrix.node }}
           cache: npm
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
       - name: Run verification
         run: npm run verify
+      - name: Audit locked dependencies
+        if: matrix.node == '24'
+        run: npm audit --audit-level=high
       - name: Check audio scheduler budget
         run: npm run benchmark:audio
 
@@ -70,15 +77,15 @@ jobs:
         os: [windows-latest, macos-latest, ubuntu-latest]
         include:
           - os: windows-latest
-            build-cmd: npm run build:win -- --publish never
+            build-cmd: npm run package:win
             artifact-name: mechvibes-windows-x64
             artifact-path: dist/**/*.exe
           - os: macos-latest
-            build-cmd: npm run build:mac -- --publish never
+            build-cmd: npm run package:mac
             artifact-name: mechvibes-macos-x64
             artifact-path: dist/**/*.dmg
           - os: ubuntu-latest
-            build-cmd: npm run build:linux -- --publish never
+            build-cmd: npm run package:linux
             artifact-name: mechvibes-linux-x64
             artifact-path: |
               dist/**/*.deb
@@ -101,16 +108,50 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Run verification
         run: npm run verify
-      # electron-builder packages the emitted JavaScript, which is not
-      # committed: compile the main process and the React renderer first.
-      - name: Compile main process and renderer bundles
-        run: npm run build:main && npm run build:renderer
+      - name: Cache Electron and packaging downloads
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+            ~/Library/Caches/electron
+            ~/Library/Caches/electron-builder
+            ~/AppData/Local/electron/Cache
+            ~/AppData/Local/electron-builder/Cache
+          key: packaging-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: packaging-${{ runner.os }}-
+      - name: Cache pinned Windows prerequisite
+        if: matrix.os == 'windows-latest'
+        uses: actions/cache@v5
+        with:
+          path: build/vendor/vc_redist.x64.exe
+          key: vcredist-x64-${{ hashFiles('build/windows-runtime.json') }}
       - name: Build packages
-        run: ${{ matrix.build-cmd }}
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! ${{ matrix.build-cmd }} 2>&1 | tee package-build.log; then
+            details=$(tail -c 6000 package-build.log)
+            details="${details//'%'/'%25'}"
+            details="${details//$'\r'/'%0D'}"
+            details="${details//$'\n'/'%0A'}"
+            echo "::error title=Packaging failed::$details"
+            exit 1
+          fi
+      - name: Smoke-test Windows install, reinstall and uninstall
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: ./tools/smoke-nsis.ps1
+
+      - name: Generate verified release metadata
+        run: npm run release:metadata -- dist
       - name: Upload compiled artifacts
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact-name }}
-          path: ${{ matrix.artifact-path }}
+          path: |
+            ${{ matrix.artifact-path }}
+            dist/SHA256SUMS.txt
+            dist/sbom.cdx.json
           if-no-files-found: error
           retention-days: 14

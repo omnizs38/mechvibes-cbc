@@ -953,9 +953,8 @@ test('schedules a buffered v3 sound through one Web Audio graph', async () => {
 });
 
 test('drops key events while the audio context is suspended instead of queueing them', async () => {
-  // FIX: an AudioContext freezes `currentTime` while suspended. Instead of dropping
-  // events and causing audio bursts when the context resumes, we now buffer pending
-  // events and flush them with proper timing once the context is running again.
+  // Keep resume pending to model a sleeping endpoint. Old input must never
+  // replay as a burst when the device becomes available.
   const starts: unknown[][] = [];
   const parameter = () => ({
     value: 0,
@@ -965,6 +964,7 @@ test('drops key events while the audio context is suspended instead of queueing 
   });
   const node = () => ({ connect() {}, disconnect() {} });
   let resumeCalls = 0;
+  let finishResume: (() => void) | undefined;
   const context = {
     currentTime: 1,
     state: 'running',
@@ -998,7 +998,7 @@ test('drops key events while the audio context is suspended instead of queueing 
     // the suspended window last long enough to matter.
     async resume() {
       resumeCalls += 1;
-      // Simulate OS resuming the context
+      await new Promise<void>((resolve) => { finishResume = resolve; });
       this.state = 'running';
     },
     async close() {
@@ -1043,22 +1043,20 @@ test('drops key events while the audio context is suspended instead of queueing 
   const frozenTime = context.currentTime;
   resumeCalls = 0;
 
-  // Send 5 keypresses while suspended - they will be buffered
-  for (let index = 0; index < 5; index += 1) {
+  // A long stream of suspended input is dropped, with only one resume request.
+  for (let index = 0; index < 1000; index += 1) {
     await engine.play({ type: 'keydown', keycode: 30 });
   }
 
   assert.equal(context.currentTime, frozenTime, 'the context clock really is frozen');
-  // When resume() completes and state changes to 'running', 
-  // flushPendingEvents() will be called by the resume().then() callback
-  // which will then call playInternal for all buffered events
-  assert.equal(starts.length, 6, 'buffered events are flushed when context resumes via resume().then()');
-  assert.equal(
-    engine.getStats().droppedEvents,
-    0,
-    'buffered events are not counted as dropped (they are postponed, not dropped)',
-  );
-  assert.ok(resumeCalls > 0, 'a resume is requested so playback recovers');
+  assert.equal(starts.length, 1, 'no samples scheduled against the frozen clock');
+  assert.equal(engine.getStats().droppedEvents, 1000);
+  assert.equal(resumeCalls, 1);
+  finishResume?.();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(starts.length, 1, 'resuming must not replay old keystrokes');
+  assert.equal(await engine.play({ type: 'keydown', keycode: 30 }), true);
+  assert.equal(starts.length, 2, 'fresh input plays after resume');
 
   await engine.dispose();
 });

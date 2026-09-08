@@ -17,8 +17,9 @@ function mechvibesFetch(
   serverUrl: string,
   requestOptions: MechvibesRequestOptions = {},
 ): Promise<Response> {
-  const headers: Record<string, string> = requestOptions.headers ?? {
+  const headers: Record<string, string> = {
     'User-Agent': `Mechvibes/${app.getVersion()} (Electron/${process.versions.electron})`,
+    ...requestOptions.headers,
   };
 
   let body = requestOptions.body;
@@ -30,6 +31,9 @@ function mechvibesFetch(
   return fetch(serverUrl, {
     ...requestOptions,
     headers,
+    signal: requestOptions.signal
+      ? AbortSignal.any([requestOptions.signal, AbortSignal.timeout(15000)])
+      : AbortSignal.timeout(15000),
     body: body as BodyInit | null | undefined,
   });
 }

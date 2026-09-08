@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import { validateSoundpackConfig } from './validation';
 import type { ValidatedSoundpackConfig } from './validation';
+import { MAX_CONFIG_BYTES } from './file-manager';
 
 export interface SoundpackMetadata {
   pack_id: string;
@@ -59,8 +60,9 @@ export function listSoundpackCandidates(rootDirectory: string): string[] {
     .readdirSync(rootDirectory, { withFileTypes: true })
     .filter(
       (entry) =>
-        entry.isDirectory() ||
-        (entry.isFile() && path.extname(entry.name).toLowerCase() === '.zip'),
+        !entry.name.startsWith('.') && !/\.(?:backup|import)-/.test(entry.name) &&
+        (entry.isDirectory() ||
+        (entry.isFile() && path.extname(entry.name).toLowerCase() === '.zip')),
     )
     .map((entry) => path.join(rootDirectory, entry.name))
     .sort((left, right) => path.basename(left).localeCompare(path.basename(right)));
@@ -77,10 +79,42 @@ export function readSoundpackConfig(candidatePath: string): unknown {
   }
 
   const configPath = path.join(candidatePath, 'config.json');
-  if (!fs.existsSync(configPath)) {
-    throw new Error('Soundpack folder does not contain config.json.');
+  const root = fs.realpathSync(candidatePath);
+  let resolvedConfig: string;
+  try {
+    resolvedConfig = fs.realpathSync(configPath);
+  } catch (error) {
+    if (error.code === 'ENOENT') throw new Error('Soundpack folder does not contain config.json.');
+    throw error;
   }
-  return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  if (!resolvedConfig.startsWith(`${root}${path.sep}`)) {
+    throw new Error('Soundpack config resolves outside the soundpack folder.');
+  }
+
+  // Check and read the same open file, not a path that can be replaced between
+  // stat and read. Refuse a last-component symlink where the OS supports it.
+  const descriptor = fs.openSync(resolvedConfig, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW ?? 0));
+  try {
+    const stat = fs.fstatSync(descriptor);
+    if (!stat.isFile() || stat.size > MAX_CONFIG_BYTES) {
+      throw new Error(`Soundpack config exceeds the ${MAX_CONFIG_BYTES} byte limit.`);
+    }
+    // A file can grow after fstat. Never allocate/read beyond the limit plus
+    // one sentinel byte, even if the advertised size was originally smaller.
+    const buffer = Buffer.alloc(MAX_CONFIG_BYTES + 1);
+    let total = 0;
+    while (total < buffer.length) {
+      const bytesRead = fs.readSync(descriptor, buffer, total, buffer.length - total, null);
+      if (bytesRead === 0) break;
+      total += bytesRead;
+    }
+    if (total > MAX_CONFIG_BYTES) {
+      throw new Error(`Soundpack config exceeds the ${MAX_CONFIG_BYTES} byte limit.`);
+    }
+    return JSON.parse(buffer.toString('utf8', 0, total));
+  } finally {
+    fs.closeSync(descriptor);
+  }
 }
 
 export function buildMetadata(candidatePath: string, isCustom: boolean): SoundpackMetadata {

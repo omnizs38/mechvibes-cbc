@@ -5,9 +5,9 @@ type Props = {
 };
 
 const LINKS = [
-  { label: 'Website', url: 'https://mechvibes.com' },
+  { label: 'Website', url: 'https://mechvibes-cbc.pages.dev/' },
   { label: 'Soundpacks', url: 'https://mechvibes.com/sound-packs/' },
-  { label: 'GitHub', url: 'https://github.com/hainguyents13/mechvibes/' },
+  { label: 'GitHub', url: 'https://github.com/omnizs38/mechvibes-cbc' },
   { label: 'Donate', url: 'https://buymeacoff.ee/hainguyents13' },
 ];
 

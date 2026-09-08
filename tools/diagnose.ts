@@ -16,8 +16,8 @@
  *   6. the BrowserWindow flags allow ES modules on file://
  *
  * Usage:
- *   npx ts-node tools/diagnose.ts                 # working tree + auto-detected install
- *   npx ts-node tools/diagnose.ts "C:\\Program Files\\Mechvibes"
+ *   npm run diagnose --                 # working tree + auto-detected install
+ *   npm run diagnose -- "C:\\Program Files\\Mechvibes"
  *
  * The report is printed and written to mechvibes-diagnostics.txt.
  */
@@ -242,7 +242,7 @@ function inspectHtml(source: Source, windowName: string): void {
       bad('  ' + reference.kind + ' ' + reference.href + ' is referenced but missing at ' + resolved);
     }
     if (reference.kind === 'script' && / crossorigin/i.test(reference.tag)) {
-      warn('  ' + reference.href + ' is tagged crossorigin; under file:// this only works while webSecurity is disabled');
+      info('  ' + reference.href + ' uses module CORS; verify loading in Electron, not by disabling webSecurity');
     }
   }
 }
@@ -257,6 +257,9 @@ function inspectMain(source: Source): void {
   const code: string = buffer.toString('utf8');
 
   const loads: string[] = [...code.matchAll(/loadFile\(\s*['"]([^'"]+)['"]/g)].map((entry): string => entry[1]);
+  for (const entry of code.matchAll(/loadFile\(path.join\(__dirname, ['"]renderer-dist['"], ['"]([^'"]+)['"]\)/g)) {
+    loads.push('src/renderer-dist/' + entry[1]);
+  }
   if (loads.length === 0) {
     warn('no loadFile() call found in the compiled main process');
   }
@@ -278,11 +281,13 @@ function inspectMain(source: Source): void {
   const windowCount: number = (code.match(/new\s+(?:[A-Za-z_$][\w$]*\.)*BrowserWindow\(/g) || []).length;
   const relaxed: number = webSecurity.filter((value): boolean => value === 'false').length;
   info('BrowserWindow instances: ' + windowCount + ' (web security disabled in ' + relaxed + ')');
-  if (windowCount > relaxed) {
-    warn(
-      'not every window sets webSecurity: false. ES module bundles served over file:// are blocked by CORS in windows that keep web security enabled, so those windows stay blank even with a correct CSP.',
-    );
+  if (relaxed > 0) warn('webSecurity is disabled; restore the Electron default rather than bypassing CSP/CORS.');
+  const preloads = [...code.matchAll(/preload:\s*path.join\(__dirname, ['"]([^'"]+)['"]\)/g)];
+  if (preloads.length !== windowCount) bad('Every renderer window must configure a preload.');
+  for (const [, preload] of preloads) {
+    if (!source.stat('src/' + preload)) bad('Missing preload: src/' + preload);
   }
+
 }
 
 function inspectSource(title: string, source: Source): void {
@@ -404,7 +409,7 @@ if (exists(path.join(repoRoot, 'package.json'))) {
 const installations: string[] = findInstallations(process.argv[2]);
 if (installations.length === 0) {
   section('INSTALLED BUILD');
-  warn('no app.asar found. Pass the installation directory explicitly: npx ts-node tools/diagnose.ts "C:\\Program Files\\Mechvibes"');
+  warn('no app.asar found. Pass the installation directory explicitly: npm run diagnose -- "C:\\Program Files\\Mechvibes"');
 } else {
   for (const asar of installations) {
     try {

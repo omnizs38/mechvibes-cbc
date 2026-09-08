@@ -38,7 +38,7 @@ export function PreferencesCard({
         <div className="field-label">
           <label htmlFor="theme-mode">Appearance</label>
           <span className="hint">
-            {themeMode === 'system' ? 'Following Windows' : 'Set manually'}
+            {themeMode === 'system' ? 'Following system' : 'Set manually'}
           </span>
         </div>
         <select
@@ -47,7 +47,7 @@ export function PreferencesCard({
           value={themeMode}
           onChange={(event) => onThemeModeChange(event.target.value as ThemeMode)}
         >
-          <option value="system">Follow Windows</option>
+          <option value="system">Follow system</option>
           <option value="light">Light</option>
           <option value="dark">Dark</option>
         </select>

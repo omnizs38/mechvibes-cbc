@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ipcRenderer, log, openExternal } from '../shared/electron';
+import { ipcRenderer, openExternal } from '../shared/electron';
 import { readBoolean, store } from '../shared/store';
 import { Banners } from './components/Banners';
 import { Footer } from './components/Footer';
@@ -8,12 +8,10 @@ import { SoundCard } from './components/SoundCard';
 import { SoundpackCard } from './components/SoundpackCard';
 import { StatusBar } from './components/StatusBar';
 import { UpdatesCard } from './components/UpdatesCard';
-import { APP_VERSION, MV_TRAY_LSID, useMechvibes } from './useMechvibes';
+import { MV_TRAY_LSID, useMechvibes } from './useMechvibes';
 import { useOutputDevices } from './useOutputDevices';
 import { useTheme } from './useTheme';
 import { useUpdater } from './useUpdater';
-
-const DEBUG_STATUS_URL = 'https://beta.mechvibes.com/debug/status/';
 
 export function App() {
   const mechvibes = useMechvibes();
@@ -27,7 +25,6 @@ export function App() {
   });
 
   const [trayIcon, setTrayIcon] = useState(() => readBoolean(MV_TRAY_LSID, false));
-  const [debugOptionsAvailable, setDebugOptionsAvailable] = useState(false);
 
   // Mirror the stored tray preference to the main process on startup.
   useEffect(() => {
@@ -37,29 +34,6 @@ export function App() {
   const toggleTrayIcon = useCallback((enabled: boolean) => {
     store.set(MV_TRAY_LSID, enabled);
     setTrayIcon(enabled);
-  }, []);
-
-  // The advanced/debug entry point is only shown when the backend enables it.
-  useEffect(() => {
-    let canceled = false;
-    fetch(DEBUG_STATUS_URL, {
-      method: 'GET',
-      headers: {
-        'User-Agent': `Mechvibes/${APP_VERSION} (Electron/${process.versions.electron})`,
-      },
-    })
-      .then(async (response) => {
-        const body = await response.text();
-        if (!canceled && response.status === 200 && body === 'enabled') {
-          setDebugOptionsAvailable(true);
-        }
-      })
-      .catch((error: unknown) => {
-        log.debug(`Debug status check failed: ${error instanceof Error ? error.message : error}`);
-      });
-    return () => {
-      canceled = true;
-    };
   }, []);
 
   const subtitle = useMemo(() => {
@@ -156,7 +130,7 @@ export function App() {
       <StatusBar version={mechvibes.appVersion} updater={updater} />
 
       <Footer
-        debugOptionsAvailable={debugOptionsAvailable}
+        debugOptionsAvailable={true}
         onOpenDebugOptions={mechvibes.openDebugOptions}
         onOpenExternal={openExternal}
       />

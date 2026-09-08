@@ -14,7 +14,6 @@ export const MAX_ARCHIVE_ENTRIES = 4096;
 export const MAX_CONFIG_BYTES = 1024 * 1024;
 export const MAX_FILE_BYTES = 64 * 1024 * 1024;
 
-const fileCache = new Map<string, string>();
 const archiveEntriesCache = new Map<
   string,
   { size: number; mtimeMs: number; entries: ArchiveEntry[] }
@@ -71,11 +70,14 @@ function openArchive(folder: string): ArchiveEntry[] {
   }
 
   let totalUncompressedBytes = 0;
+  const names = new Set<string>();
   for (const entry of entries) {
     if (entry.isDirectory) {
       continue;
     }
-    normalizeArchivePath(entry.entryName);
+    const name = normalizeArchivePath(entry.entryName);
+    if (names.has(name)) throw new Error(`Duplicate archive path: ${name}.`);
+    names.add(name);
     const size = entrySize(entry);
     if (size !== null) {
       totalUncompressedBytes += size;
@@ -83,6 +85,10 @@ function openArchive(folder: string): ArchiveEntry[] {
         throw new Error(`Soundpack archive expands beyond the ${MAX_ARCHIVE_BYTES} byte limit.`);
       }
     }
+  }
+  // Each entry retains its compressed archive; avoid retaining every imported ZIP.
+  if (archiveEntriesCache.size >= 2) {
+    archiveEntriesCache.delete(archiveEntriesCache.keys().next().value as string);
   }
   archiveEntriesCache.set(folder, { size: stat.size, mtimeMs: stat.mtimeMs, entries });
   return entries;
@@ -147,19 +153,12 @@ export function GetFilesFromArchive(folder: string): Record<string, string> {
 }
 
 export function GetFileFromArchive(folder: string, search: string): string | null {
-  const cacheKey = `archive:${folder}:${normalizeArchivePath(search)}`;
-  const cached = fileCache.get(cacheKey);
-  if (cached !== undefined) {
-    return cached;
-  }
-
   const entry = findArchiveEntry(openArchive(folder), search);
   if (!entry) {
     return null;
   }
   const isConfig = normalizeArchivePath(search) === 'config.json';
   const value = readArchiveEntry(entry, isConfig);
-  fileCache.set(cacheKey, value);
   return value;
 }
 
@@ -181,12 +180,6 @@ function resolveContainedFile(folder: string, file: unknown): string | null {
 }
 
 export function GetFileFromFolder(folder: string, file: string): string | null {
-  const cacheKey = `folder:${folder}:${file}`;
-  const cached = fileCache.get(cacheKey);
-  if (cached !== undefined) {
-    return cached;
-  }
-
   const filePath = resolveContainedFile(folder, file);
   if (filePath === null) {
     return null;
@@ -200,7 +193,6 @@ export function GetFileFromFolder(folder: string, file: string): string | null {
     throw new Error(`Unsupported audio type in "${file}".`);
   }
   const value = `data:${mimeType};base64,${fs.readFileSync(filePath, 'base64')}`;
-  fileCache.set(cacheKey, value);
   return value;
 }
 
@@ -242,7 +234,24 @@ export function GetSoundpackSource(absPath: string, sound: unknown): string {
 export async function ReadSoundpackSource(source: unknown): Promise<Buffer | null> {
   const value = String(source);
   if (value.startsWith('file:')) {
-    return fs.promises.readFile(fileURLToPath(value));
+    const handle = await fs.promises.open(fileURLToPath(value), 'r');
+    try {
+      const stat = await handle.stat();
+      if (!stat.isFile() || stat.size > MAX_FILE_BYTES) {
+        throw new Error(`Soundpack file exceeds the ${MAX_FILE_BYTES} byte limit.`);
+      }
+      const buffer = Buffer.alloc(Math.min(stat.size + 1, MAX_FILE_BYTES + 1));
+      let total = 0;
+      while (total < buffer.length) {
+        const { bytesRead } = await handle.read(buffer, total, buffer.length - total, null);
+        if (!bytesRead) break;
+        total += bytesRead;
+      }
+      if (total > stat.size) throw new Error('Soundpack file changed while reading.');
+      return buffer.subarray(0, total);
+    } finally {
+      await handle.close();
+    }
   }
   if (value.startsWith('mechvibes-archive:')) {
     let descriptor: { archive: string; file: string };
@@ -268,9 +277,4 @@ export async function ReadSoundpackSource(source: unknown): Promise<Buffer | nul
 
 export function ClearSoundpackCache(absPath: string): void {
   archiveEntriesCache.delete(absPath);
-  for (const cacheKey of fileCache.keys()) {
-    if (cacheKey.startsWith(`archive:${absPath}:`) || cacheKey.startsWith(`folder:${absPath}:`)) {
-      fileCache.delete(cacheKey);
-    }
-  }
 }

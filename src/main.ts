@@ -1,5 +1,8 @@
 // Modules to control application life and create native browser window
 import { app, BrowserWindow, Tray, Menu, shell, ipcMain, dialog } from 'electron';
+import { isWindowEvent, protectWebContents, safeExternalUrl } from './utils/window-security';
+
+app.on('web-contents-created', (_event, contents) => protectWebContents(contents));
 
 declare global {
   namespace Electron {
@@ -68,11 +71,13 @@ const storage_prompted = new StoreToggle("mechvibes-migrate-asked", false);
 
 // Remote debugging defaults
 const IpcServer = require("./utils/ipc");
+let debugEpoch = 0;
 let debug = {
   enabled: false, // the user must enable remote debugging via the debug options window
   identifier: undefined, // the ipc server should be configured to provide unique identifiers for live debugging sessions
   remoteUrl: "https://beta.mechvibes.com/debug/ipc/",
   async enable() {
+    const epoch = ++debugEpoch;
     this.enabled = true;
     const userInfo = {
       hostname: os.hostname(), // Lunas-Macbook-Pro.local
@@ -83,6 +88,7 @@ let debug = {
 
     if(this.identifier === undefined){
       const json = await IpcServer.identify(userInfo);
+      if (epoch !== debugEpoch) return;
       if(json.success){
         this.identifier = json.identifier;
         fs.writeJsonSync(debugConfigFile, {enabled: true, identifier: json.identifier});
@@ -114,6 +120,7 @@ let debug = {
       log.transports.remote.client.identifier = this.identifier;
       log.transports.remote.level = "silly";
       const json = await IpcServer.validate(this.identifier, userInfo);
+      if (epoch !== debugEpoch) return;
       if(!json.success){
         console.log("Failed validation");
         log.transports.remote.level = false;
@@ -123,10 +130,11 @@ let debug = {
       }
     }
     if (win && !win.isDestroyed()) {
-      win.webContents.send("debug-in-use", true);
+      win.webContents.send("debug-in-use", debug.enabled);
     }
   },
   disable() {
+    debugEpoch += 1;
     this.enabled = false;
     this.identifier = undefined; // clear identifier, for user privacy
     log.transports.remote.level = false;
@@ -149,7 +157,12 @@ IpcServer.setRemoteUrl(debug.remoteUrl);
 function enableDebugSafely() {
   debug.enable().catch((error) => {
     debug.enabled = false;
+    log.transports.remote.level = false;
     log.error(`Remote debugging could not be enabled: ${error}`);
+  }).finally(() => {
+    if (debugWindow && !debugWindow.isDestroyed()) {
+      debugWindow.webContents.send('debug-update', { enabled: debug.enabled, identifier: debug.identifier });
+    }
   });
 }
 
@@ -240,7 +253,7 @@ function createWindow(show = false) {
   win.removeMenu();
 
   // and load the index.html of the app.
-  win.loadFile('./src/renderer-dist/app.html');
+  void win.loadFile(path.join(__dirname, 'renderer-dist', 'app.html'));
 
   // Open the DevTools.
   // win.openDevTools();
@@ -248,7 +261,7 @@ function createWindow(show = false) {
 
   win.webContents.on("did-finish-load", () => {
     if(debug.enabled){
-      win.webContents.send("debug-in-use", true);
+      win.webContents.send("debug-in-use", debug.enabled);
     }
     win.webContents.send("ava-toggle", active_volume.is_enabled);
     win.webContents.send("mechvibes-mute-status", mute.is_enabled);
@@ -290,6 +303,11 @@ function createWindow(show = false) {
 
 let installer = null as unknown as import('electron').BrowserWindow;
 function openInstallWindow(packId: string){
+  if (installer && !installer.isDestroyed()) {
+    installer.show();
+    installer.focus();
+    return; // Do not replace an in-progress installation.
+  }
   // Create the browser window.
   installer = new BrowserWindow({
     width: 300,
@@ -311,7 +329,7 @@ function openInstallWindow(packId: string){
   installer.removeMenu();
 
   // and load the index.html of the app.
-  installer.loadFile('./src/renderer-dist/install.html');
+  void installer.loadFile(path.join(__dirname, 'renderer-dist', 'install.html'));
 
   installer.webContents.on("did-finish-load", () => {
     installer.webContents.send("install-pack", packId);
@@ -344,7 +362,7 @@ function createDebugWindow(){
     // resizable: false,
     // fullscreenable: false,
     webPreferences: {
-      preload: path.join(__dirname, 'debug.js'),
+      preload: path.join(__dirname, 'preload.js'),
       contextIsolation: false,
       nodeIntegration: true,
     },
@@ -357,7 +375,7 @@ function createDebugWindow(){
   debugWindow.removeMenu();
 
   // and load the index.html of the app.
-  debugWindow.loadFile('./src/renderer-dist/debug.html');
+  void debugWindow.loadFile(path.join(__dirname, 'renderer-dist', 'debug.html'));
 
   debugWindow.webContents.on("did-finish-load", () => {
     const options = {
@@ -516,7 +534,7 @@ if (!gotTheLock) {
     };
 
     ipcMain.on('renderer-ready', (event) => {
-      if (!win || event.sender !== win.webContents) {
+      if (!isWindowEvent(event, win)) {
         return;
       }
       sendToMainWindow('ava-toggle', active_volume.is_enabled);
@@ -714,7 +732,8 @@ if (!gotTheLock) {
       }
     }
 
-    ipcMain.on('show_tray_icon', (_event, show) => {
+    ipcMain.on('show_tray_icon', (event, show) => {
+      if (!isWindowEvent(event, win) || typeof show !== 'boolean') return;
       if (show && tray === null) {
         createTrayIcon();
       } else if (!show && tray !== null) {
@@ -724,8 +743,16 @@ if (!gotTheLock) {
     });
 
     // Accepts both IpcMainEvent and IpcMainInvokeEvent — only `sender` is read.
-    const isMainWindowEvent = (event: { sender: import('electron').WebContents }) =>
-      Boolean(win && !win.isDestroyed() && event.sender === win.webContents);
+    const isMainWindowEvent = (event: import('electron').IpcMainEvent | import('electron').IpcMainInvokeEvent) =>
+      isWindowEvent(event, win);
+
+    ipcMain.handle('open-external', async (event, value) => {
+      if (![win, installer, debugWindow, editor_window].some((window) => isWindowEvent(event, window))) return false;
+      const url = safeExternalUrl(value);
+      if (!url) return false;
+      await shell.openExternal(url);
+      return true;
+    });
 
     ipcMain.on('updater-get-state', (event) => {
       event.returnValue = isMainWindowEvent(event) && updateService ? updateService.getState() : null;
@@ -738,8 +765,14 @@ if (!gotTheLock) {
     });
     ipcMain.on('updater-install', (event) => {
       if (isMainWindowEvent(event) && updateService) {
-        app.isQuiting = true;
-        updateService.install();
+        if (updateService.getState().status !== 'downloaded') return;
+        try {
+          app.isQuiting = true;
+          updateService.install();
+        } catch (error) {
+          app.isQuiting = false;
+          log.error(`Could not install update: ${error}`);
+        }
       }
     });
     ipcMain.on('updater-set-channel', (event, channel) => {
@@ -772,9 +805,13 @@ if (!gotTheLock) {
       const source = result.filePaths[0];
       const fileName = path.basename(source);
       const target = path.join(custom_dir, fileName);
-      const temporary = `${target}.import-${Date.now()}.zip`;
+      const temporary = `${target}.import-${require('node:crypto').randomUUID()}.zip`;
       if (fs.existsSync(target)) return { ok: false, error: 'A soundpack with this filename already exists.' };
       try {
+        const sourceStat = fs.statSync(source);
+        if (!sourceStat.isFile() || sourceStat.size > 256 * 1024 * 1024) {
+          throw new Error('Soundpack archive exceeds the 256 MiB limit.');
+        }
         fs.copyFileSync(source, temporary, fs.constants.COPYFILE_EXCL);
         const config = validateSoundpackCandidate(temporary);
         fs.moveSync(temporary, target, { overwrite: false });
@@ -809,26 +846,29 @@ if (!gotTheLock) {
     });
 
     ipcMain.on('electron-log', (event, message, level) => {
+      if (![win, installer, debugWindow, editor_window].some((window) => isWindowEvent(event, window))) return;
       const allowedLevels = new Set(['error', 'warn', 'info', 'verbose', 'debug', 'silly']);
       const safeLevel = allowedLevels.has(level) ? level : 'info';
       log.variables.sender = resolveLogSenderName(event);
-      log[safeLevel](String(message));
+      log[safeLevel](String(message).slice(0, 16000));
       log.variables.sender = 'main';
     });
 
-    ipcMain.on('open-debug-options', () => {
+    ipcMain.on('open-debug-options', (event) => {
+      if (!isMainWindowEvent(event)) return;
       createDebugWindow();
     });
 
     ipcMain.on('fetch-debug-options', (event) => {
-      if (!debugWindow || debugWindow.isDestroyed() || event.sender !== debugWindow.webContents) {
+      if (!isWindowEvent(event, debugWindow)) {
         return;
       }
-      debugWindow.webContents.send('debug-options', { ...debug, path: debugConfigFile });
+      debugWindow.webContents.send('debug-options', { enabled: debug.enabled, identifier: debug.identifier, level: log.transports.remote.level, path: debugConfigFile });
     });
 
-    ipcMain.on('set-debug-options', (_event, json) => {
-      if (!json || typeof json.enabled !== 'boolean') {
+    ipcMain.on('set-debug-options', (event, json) => {
+      if (!json || typeof json.enabled !== 'boolean' ||
+        (!isWindowEvent(event, debugWindow) && !(isMainWindowEvent(event) && json.enabled === false))) {
         return;
       }
       if (json.enabled && !debug.enabled) {
@@ -840,15 +880,16 @@ if (!gotTheLock) {
 
     // allow the installer to set its size using the height of the body so that when content changes,
     // the installer can only be as big or as small as it needs to be.
-    ipcMain.on('resize-installer', (_event, size) => {
-      if (!installer || installer.isDestroyed()) {
+    ipcMain.on('resize-installer', (event, size) => {
+      if (!isWindowEvent(event, installer)) {
         return;
       }
       const requestedHeight = Math.min(800, Math.max(100, Number(size) || 200));
       const diff = installer.getSize()[1] - installer.getContentSize()[1];
       installer.setSize(300, Math.round(requestedHeight + diff), true);
     });
-    ipcMain.on('installed', (_event, packFolder) => {
+    ipcMain.on('installed', (event, packFolder) => {
+      if (!isWindowEvent(event, installer)) return;
       if (typeof packFolder !== 'string' || !/^[a-zA-Z0-9._-]+$/.test(packFolder)) {
         log.warn('Installer returned an invalid soundpack folder.');
         return;
@@ -971,7 +1012,7 @@ function openEditorWindow() {
     // modal: true,
     // parent: win,
     webPreferences: {
-      // preload: path.join(__dirname, 'editor.js'),
+      preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: true,
       contextIsolation: false,
     },
@@ -980,7 +1021,7 @@ function openEditorWindow() {
 
   // editor_window.openDevTools();
 
-  editor_window.loadFile('./src/renderer-dist/editor.html');
+  void editor_window.loadFile(path.join(__dirname, 'renderer-dist', 'editor.html'));
 
   editor_window.on('closed', function () {
     editor_window = null as any;
