@@ -1,204 +1,97 @@
-/**
- * Mechvibes-cbc Website
- *
- * The page ships with static fallback values in the markup and upgrades them
- * once the GitHub API responds, so it stays correct and readable without JS,
- * offline, or when the API rate-limits us.
- */
 import { renderMarkdown, truncateMarkdown } from './markdown.js';
-import { GITHUB_URL, activityStatus, buildPlatforms, detectPlatform, loadProjectData, pickInstaller, platformLabel, relativeDate, } from './github.js';
-/**
- * Longest release body we render inline before linking out to GitHub. Real
- * release notes are a heading plus a handful of bullets; this fits that
- * without letting a changelog-sized body take over the page.
- */
-const RELEASE_BODY_LIMIT = 1400;
-document.addEventListener('DOMContentLoaded', () => {
-    setupTheme();
-    setupRepoLinks();
-    setupFooterYear();
-    void hydrate();
-});
-/* ===== THEME =====
-   The class itself is set by an inline script in <head> so the first paint is
-   already correct; this only wires up the toggle. */
+import { loadProjectData, detectPlatform, pickInstaller, formatSize } from './github.js';
+import { setupDemo } from './demo.js';
 function setupTheme() {
-    const toggle = document.getElementById('themeToggle');
+    const toggle = document.querySelector('#themeToggle');
     if (!toggle)
         return;
-    const root = document.documentElement;
-    toggle.setAttribute('aria-pressed', String(root.classList.contains('dark-mode')));
+    let mode = 'system';
+    try {
+        const saved = localStorage.getItem('theme');
+        if (saved === 'light' || saved === 'dark')
+            mode = saved;
+    }
+    catch {
+        /* No storage required. */
+    }
+    const query = matchMedia('(prefers-color-scheme: dark)');
+    const apply = () => {
+        document.documentElement.dataset.theme = mode === 'system' ? (query.matches ? 'dark' : 'light') : mode;
+        toggle.textContent = `Theme: ${mode[0].toUpperCase()}${mode.slice(1)}`;
+        toggle.setAttribute('aria-label', `Color theme: ${mode}. Click to change.`);
+    };
     toggle.addEventListener('click', () => {
-        const isDark = root.classList.toggle('dark-mode');
+        mode = mode === 'system' ? 'light' : mode === 'light' ? 'dark' : 'system';
         try {
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            localStorage.setItem('theme', mode);
         }
         catch {
-            // Private browsing: the toggle still works for this session.
+            /* Session-only fallback. */
         }
-        toggle.setAttribute('aria-pressed', String(isDark));
+        apply();
     });
-}
-/* ===== STATIC DERIVATIONS ===== */
-/**
- * Point every GitHub link at the repository named in github.ts, so the slug
- * lives in exactly one place instead of being repeated across the markup.
- */
-function setupRepoLinks() {
-    const paths = {
-        repo: '',
-        issues: '/issues',
-        releases: '/releases',
-        readme: '#readme',
-        license: '/blob/main/LICENSE',
-    };
-    document
-        .querySelectorAll('[data-gh-link]')
-        .forEach((link) => {
-        const key = link.dataset.ghLink ?? '';
-        if (key in paths) {
-            link.href = `${GITHUB_URL}${paths[key]}`;
-        }
-    });
-}
-function setupFooterYear() {
-    setSlot('year', String(new Date().getFullYear()));
-}
-/* ===== LIVE DATA ===== */
-async function hydrate() {
-    let data;
-    try {
-        data = await loadProjectData();
-    }
-    catch (error) {
-        console.error('Could not load project data from GitHub:', error);
-        showReleaseFallback();
-        return;
-    }
-    const { latest } = data;
-    setSlot('version', latest?.tag_name ?? null);
-    setSlot('license', data.license);
-    setSlot('status', activityStatus(data.pushedAt));
-    setSlot('release-count', data.releaseCount ? String(data.releaseCount) : null);
-    setSlot('updated', latest ? relativeDate(latest.published_at) : null);
-    const platforms = buildPlatforms(latest);
-    setSlot('platforms', platforms.length ? platforms.join(' · ') : null);
-    if (latest) {
-        renderRelease(latest);
-        setupDownload(latest);
-    }
-    else {
-        showReleaseFallback();
-    }
-}
-/**
- * Fill a `data-gh` slot and drop its loading state. A null value leaves the
- * markup's fallback text untouched.
- */
-function setSlot(name, value) {
-    document
-        .querySelectorAll(`[data-gh="${name}"]`)
-        .forEach((el) => {
-        if (value)
-            el.textContent = value;
-        el.classList.remove('is-loading');
-    });
+    query.addEventListener('change', apply);
+    apply();
 }
 function renderRelease(release) {
-    const name = document.getElementById('releaseName');
-    const date = document.getElementById('releaseDate');
-    const body = document.getElementById('releaseBody');
-    const link = document.querySelector('#releaseLink');
-    if (!name || !date || !body || !link)
-        return;
-    name.textContent = release.name || release.tag_name;
-    name.classList.remove('is-loading');
-    const published = new Date(release.published_at);
-    date.textContent = published.toLocaleDateString('en-US', {
+    document.getElementById('releaseName').textContent = release.name || release.tag_name;
+    const date = document.querySelector('#releaseDate');
+    date.dateTime = release.published_at;
+    date.textContent = new Date(release.published_at).toLocaleDateString('en', {
         year: 'numeric',
-        month: 'long',
+        month: 'short',
         day: 'numeric',
     });
-    date.setAttribute('datetime', release.published_at);
-    renderReleaseBody(body, release.body?.trim() ?? '');
-    link.href = release.html_url;
-    link.rel = 'noopener noreferrer';
-    document.getElementById('release-card')?.classList.remove('is-loading');
-}
-/**
- * Release notes are Markdown, so render them as such - but the body is
- * authored by whoever can publish a release and is not trusted. renderMarkdown
- * builds DOM nodes and never parses an HTML string, so nothing in the body can
- * become markup; see markdown.ts.
- */
-function renderReleaseBody(body, source) {
-    body.replaceChildren();
-    if (!source) {
-        body.textContent = 'No description available.';
-        return;
-    }
-    const { text, truncated } = truncateMarkdown(source, RELEASE_BODY_LIMIT);
-    body.appendChild(renderMarkdown(text));
-    if (truncated) {
-        const note = document.createElement('p');
-        note.className = 'release-truncated';
-        note.textContent = 'Notes truncated - open the release on GitHub to read the rest.';
-        body.appendChild(note);
-    }
-}
-function showReleaseFallback() {
-    const name = document.getElementById('releaseName');
     const body = document.getElementById('releaseBody');
-    if (name) {
-        name.textContent = 'Release information unavailable';
-        name.classList.remove('is-loading');
+    const notes = truncateMarkdown(release.body?.trim() || 'Release notes are available on GitHub.', 1100);
+    body.replaceChildren(renderMarkdown(notes.text));
+    const releaseLink = document.querySelector('#releaseLink');
+    releaseLink.href = release.html_url;
+    for (const button of document.querySelectorAll('[data-platform]')) {
+        const asset = pickInstaller(release, button.dataset.platform);
+        button.href = asset?.browser_download_url ?? release.html_url;
+        button.querySelector('.asset-note').textContent = asset
+            ? `${release.tag_name} · ${/arm64/i.test(asset.name) ? 'ARM64 · ' : /x64/i.test(asset.name) ? 'x64 · ' : ''}${formatSize(asset.size)}`
+            : 'No matching installer · view release';
     }
-    if (body) {
-        body.textContent =
-            'Could not reach the GitHub API. Use the link above to see the latest release.';
-    }
-    document.getElementById('release-card')?.classList.remove('is-loading');
-    document
-        .querySelectorAll('[data-gh]')
-        .forEach((el) => el.classList.remove('is-loading'));
-}
-/**
- * Send visitors straight to the installer for their OS. The button is a real
- * link with a release-page fallback in the markup, so it works before this
- * runs and when no matching asset exists.
- */
-function setupDownload(release) {
-    const button = document.querySelector('#downloadBtn');
-    if (!button)
-        return;
+    const download = document.querySelector('#downloadBtn');
     const platform = detectPlatform();
     const asset = pickInstaller(release, platform);
-    button.href = asset ? asset.browser_download_url : release.html_url;
-    const label = button.querySelector('.btn-label');
-    const note = button.querySelector('.btn-note');
-    if (label) {
-        label.textContent = asset
-            ? `Download ${platformLabel(platform)}`.trim()
-            : 'View latest release';
+    download.href = asset?.browser_download_url ?? '#download';
+    const names = { windows: 'Windows', mac: 'macOS', linux: 'Linux', unknown: '' };
+    download.querySelector('.btn-label').textContent = asset ? `Get it for ${names[platform]}` : 'Choose your download';
+    document.querySelector('.btn-note').textContent =
+        `${release.tag_name}${release.prerelease ? ' · prerelease' : ' · stable'}`;
+}
+async function hydrate(force = false) {
+    const status = document.getElementById('releaseStatus');
+    const retry = document.querySelector('#retryRelease');
+    retry.disabled = true;
+    status.textContent = 'Fetching published release information…';
+    try {
+        const data = await loadProjectData(force);
+        if (data.latest) {
+            renderRelease(data.latest);
+            status.textContent = `${data.latest.prerelease ? 'Published prerelease' : 'Latest stable release'}: ${data.latest.tag_name}.${data.source === 'stale' ? ' Showing saved information; check GitHub for newer releases.' : ''}`;
+        }
+        else {
+            status.textContent = 'No published releases yet. Follow development on GitHub.';
+        }
+        retry.hidden = data.source !== 'stale';
     }
-    if (note) {
-        note.textContent = asset
-            ? `${release.tag_name} · ${formatSize(asset.size)}`
-            : release.tag_name;
+    catch {
+        status.textContent = 'GitHub is unavailable or rate-limited. The download cards still open the releases page.';
+        document.getElementById('releaseName').textContent = 'Release information unavailable';
+        retry.hidden = false;
+    }
+    finally {
+        retry.disabled = false;
     }
 }
-function formatSize(bytes) {
-    return `${Math.round(bytes / 1024 / 1024)} MB`;
-}
-/* ===== NAVIGATION ===== */
-document
-    .querySelectorAll('a[href="#"]')
-    .forEach((link) => {
-    link.addEventListener('click', (event) => {
-        event.preventDefault();
-        window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
-    });
+setupTheme();
+setupDemo();
+document.getElementById('year').textContent = String(new Date().getFullYear());
+document.getElementById('retryRelease').addEventListener('click', () => {
+    void hydrate(true);
 });
-function prefersReducedMotion() {
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
+void hydrate();

@@ -1,5 +1,7 @@
 # Mechvibes-cbc
 
+> **3.0 beta development:** this branch prepares `3.0.0-beta.1`. See [the 3.0 guide](docs/version-3.md) and [changelog](CHANGELOG.md). Published downloads remain independent of this source version.
+
 <p align="center">
   <img src="https://mechvibes.com/images/icon.png" alt="Mechvibes-cbc Logo" width="128">
 </p>
@@ -81,6 +83,8 @@ On macOS, grant Accessibility/Input Monitoring permissions when requested.
 - 🎵 Support for Soundpack v1, v2 and v3
 - ⚡ Low-latency Web Audio playback engine
 - 🎧 Output device selection
+- 🎚️ Named sound profiles with validated JSON export/import
+- 🔇 Quick mute from the main window, tray or hotkey
 - 🌙 Dark mode support
 - 📦 ZIP import, validated installation with cancellation, and soundpack management
 - ⭐ Persistent favorites and multi-word search by name, group or ID
@@ -206,6 +210,7 @@ If you find a bug or have an idea for a new feature, feel free to open an issue 
 
 Before opening a pull request, run `npm run verify` — the same script gates CI on Node 22 and 24.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development checks and [SECURITY.md](SECURITY.md) for the security model.
+The [3.0 guide](docs/version-3.md) covers profiles and website development.
 The [modernization notes](docs/modernization.md) include behavior changes and the native-platform test checklist.
 
 ---

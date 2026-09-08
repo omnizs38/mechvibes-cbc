@@ -1,5 +1,7 @@
 // Modules to control application life and create native browser window
-import { app, BrowserWindow, Tray, Menu, shell, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, Tray, Menu, shell, ipcMain, dialog, powerMonitor } from 'electron';
+import { PROFILE_STORE_KEY, validateProfiles, mergeProfiles, serializeProfiles } from './utils/profiles';
+import { readProfileBackup } from './services/profile-files';
 import { isWindowEvent, protectWebContents, safeExternalUrl } from './utils/window-security';
 
 app.on('web-contents-created', (_event, contents) => protectWebContents(contents));
@@ -217,6 +219,7 @@ log.transports.console.colorMap = { error: 'red', warn: 'yellow', info: 'cyan', 
 // Windows are created during app startup; treated as always-present after boot.
 let win = null as unknown as import('electron').BrowserWindow;
 let tray = null as unknown as import('electron').Tray;
+let trayMenu: import('electron').Menu | null = null;
 let updateService = null as unknown as import('./services/update-service').UpdateService;
 (global as any).app_version = app.getVersion();
 (global as any).custom_dir = custom_dir;
@@ -230,8 +233,10 @@ function createWindow(show = false) {
   win = new BrowserWindow({
     // used by logger to differentiate messages sent by different windows.
     ...({ name: 'app' } as Record<string, unknown>),
-    width: 400,
-    height: 600,
+    width: 480,
+    height: 760,
+    minWidth: 400,
+    minHeight: 540,
     // resizable: false,
     // fullscreenable: false,
     webPreferences: {
@@ -582,12 +587,21 @@ if (!gotTheLock) {
     pollSystemAudio();
     const sys_check_interval = setInterval(pollSystemAudio, 3000);
 
+    const setMuted = (enabled: boolean) => {
+      if (mute.is_enabled !== enabled) mute.toggle();
+      const item = trayMenu?.getMenuItemById('mute-sound');
+      if (item) item.checked = enabled;
+      sendToMainWindow('mechvibes-mute-status', enabled);
+    };
     const hotkeys = new HotkeyTracker({
       onMuteToggle: () => {
-        mute.toggle();
-        sendToMainWindow('mechvibes-mute-status', mute.is_enabled);
+        setMuted(!mute.is_enabled);
       },
     });
+
+    const resetInput = () => { hotkeys.reset(); sendToMainWindow('input-reset'); };
+    powerMonitor.on('suspend', resetInput);
+    powerMonitor.on('resume', resetInput);
 
     // The renderer only needs the keycode and a capture timestamp; sending the
     // whole uiohook event would serialize ~8 unused fields across the IPC bridge
@@ -657,12 +671,12 @@ if (!gotTheLock) {
           ],
         },
         {
+          id: 'mute-sound',
           label: 'Mute',
           type: 'checkbox',
           checked: mute.is_enabled,
           click: function () {
-            mute.toggle();
-            sendToMainWindow('mechvibes-mute-status', mute.is_enabled);
+            setMuted(!mute.is_enabled);
           },
         },
         {
@@ -708,6 +722,7 @@ if (!gotTheLock) {
           },
         },
       ]);
+      trayMenu = contextMenu;
 
       // On macOS double click doesn't work if we use tray.setContextMenu(), so we'll do it manually.
       if(process.platform == "darwin"){
@@ -783,6 +798,32 @@ if (!gotTheLock) {
       } catch (error) {
         log.warn(`Rejected update channel: ${error.message}`);
       }
+    });
+
+    ipcMain.on('mechvibes-set-muted', (event, enabled) => {
+      if (!isMainWindowEvent(event) || typeof enabled !== 'boolean') return;
+      setMuted(enabled);
+    });
+    ipcMain.handle('profiles-export', async (event) => {
+      if (!isMainWindowEvent(event)) return { ok: false, error: 'Invalid window.' };
+      try {
+        const data = serializeProfiles(validateProfiles(store.get(PROFILE_STORE_KEY) ?? []));
+        const result = await dialog.showSaveDialog(win, { title: 'Export sound profiles', defaultPath: 'mechvibes-profiles.json', filters: [{ name: 'JSON profiles', extensions: ['json'] }] });
+        if (result.canceled || !result.filePath) return { ok: false, canceled: true };
+        await fs.promises.writeFile(result.filePath, data, 'utf8');
+        return { ok: true };
+      } catch (error) { return { ok: false, error: error.message }; }
+    });
+    ipcMain.handle('profiles-import', async (event) => {
+      if (!isMainWindowEvent(event)) return { ok: false, error: 'Invalid window.' };
+      try {
+        const result = await dialog.showOpenDialog(win, { title: 'Import sound profiles', properties: ['openFile'], filters: [{ name: 'JSON profiles', extensions: ['json'] }] });
+        if (result.canceled || !result.filePaths.length) return { ok: false, canceled: true };
+        const imported = await readProfileBackup(result.filePaths[0]);
+        const profiles = mergeProfiles(validateProfiles(store.get(PROFILE_STORE_KEY) ?? []), imported);
+        store.set(PROFILE_STORE_KEY, profiles);
+        return { ok: true, profiles };
+      } catch (error) { return { ok: false, error: error.message }; }
     });
 
     ipcMain.handle('soundpack-open-folder', async (event) => {

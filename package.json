@@ -1,7 +1,7 @@
 {
   "name": "mechvibes",
   "productName": "Mechvibes",
-  "version": "2.5.3",
+  "version": "3.0.0-beta.1",
   "description": "Low-latency mechanical keyboard sounds for Windows, macOS and Linux.",
   "repository": "https://github.com/omnizs38/mechvibes-cbc",
   "main": "src/main.js",
@@ -26,15 +26,17 @@
     "check": "npm run build:main && node tools/check-syntax.js",
     "test": "npm run build:main && npm run test:unit",
     "benchmark:audio": "npm run build:main && node tools/audio-benchmark.js",
-    "verify": "npm run build:main && node tools/check-syntax.js && npm run test:unit && npm run typecheck && npm run build:renderer && node tools/check-renderer.js && npm run build:web",
-    "test:unit": "node tests/run.js && node --test tests/modernization.test.js tests/build.test.js",
+    "verify": "npm run build:main && npm run build:web && node tools/check-syntax.js && npm run test:unit && npm run test:web && npm run typecheck && npm run build:renderer && node tools/check-renderer.js && node tools/check-site.js",
+    "test:unit": "node tests/run.js && node --test tests/modernization.test.js tests/build.test.js tests/profiles.test.js",
     "build:app": "npm run build:main && npm run build:renderer && node tools/check-renderer.js",
     "package:all": "electron-builder -wml --publish never",
     "package:win": "electron-builder -w --publish never",
     "package:mac": "electron-builder -m --publish never",
     "package:linux": "electron-builder -l --publish never",
     "prepare:windows": "npm run build:main && node tools/prepare-windows-runtime.js",
-    "release:metadata": "node tools/release-metadata.js"
+    "release:metadata": "node tools/release-metadata.js",
+    "test:web": "node --test tests/web.test.js",
+    "test:site": "playwright test"
   },
   "engines": {
     "node": ">=22"
@@ -159,6 +161,8 @@
     "uiohook-napi": "^1.5.5"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
     "@types/adm-zip": "^0.5.7",
     "@types/fs-extra": "^11.0.4",
     "@types/mime-types": "^3.0.1",

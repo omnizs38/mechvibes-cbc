@@ -40,3 +40,12 @@ patch/minor updates; do not force major upgrades merely to silence warnings.
 Electron major upgrades, removal of `@electron/remote`, signing/notarization and
 new target architectures require dedicated validation. Do not publish a release
 or merge a broad modernization PR before reviewing native test results.
+
+## Website checks
+
+`npm run verify` also builds and validates the static website and runs release-data
+unit tests. For browser coverage, install Chromium with `npx playwright install
+--with-deps chromium`, then run `npm run test:site`. CI runs this on desktop light,
+desktop dark and mobile, including axe accessibility checks. Review generated
+`public/*.js` alongside their TypeScript sources; do not publish an unreleased
+version as a download on the landing page.

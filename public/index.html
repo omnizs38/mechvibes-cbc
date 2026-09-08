@@ -1,272 +1,193 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Mechvibes-cbc - Low-latency mechanical keyboard sound engine for Windows">
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)">
-
-    <title>Mechvibes-cbc - Mechanical Keyboard Sound Engine</title>
-
-    <!-- The release data is fetched as soon as the module runs; warming the
-         connection here overlaps DNS and TLS with parsing. -->
-    <link rel="preconnect" href="https://api.github.com" crossorigin>
-    <link rel="preload" href="./fonts/inter.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="./styles.css">
-    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='M10 8h.01'/><path d='M12 12h.01'/><path d='M14 8h.01'/><path d='M16 12h.01'/><path d='M18 8h.01'/><path d='M6 8h.01'/><path d='M7 16h10'/><path d='M8 12h.01'/><rect width='20' height='16' x='2' y='4' rx='2'/></svg>">
-
-    <!-- Applied before first paint so a dark-mode visitor never sees a white
-         flash. The toggle itself is wired up in app.js. -->
-    <script>
-        try {
-            if (localStorage.getItem('theme') === 'dark') {
-                document.documentElement.classList.add('dark-mode');
-            }
-        } catch (e) {}
-    </script>
-</head>
-<body>
-    <!-- Icons: Lucide (https://lucide.dev), ISC licensed. Inlined rather than
-         loaded from a CDN so they cost no request and never pop in after paint. -->
-    <svg xmlns="http://www.w3.org/2000/svg" class="icon-sprite" aria-hidden="true">
-        <symbol id="i-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.914 4a1.5 1.5 0 00-2.474-1.561l-9 9A1.5 1.5 0 005.5 14h4.002a.5.5 0 01.471.666L8.086 20a1.5 1.5 0 002.475 1.56l9-9A1.5 1.5 0 0018.5 10h-3.997a.5.5 0 01-.472-.667z"/></symbol>
-        <symbol id="i-sliders" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5H3"/><path d="M12 19H3"/><path d="M14 3v4"/><path d="M16 17v4"/><path d="M21 12h-9"/><path d="M21 19h-5"/><path d="M21 5h-7"/><path d="M8 10v4"/><path d="M8 12H3"/></symbol>
-        <symbol id="i-volume" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/></symbol>
-        <symbol id="i-code" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></symbol>
-        <symbol id="i-gamepad" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" x2="10" y1="11" y2="11"/><line x1="8" x2="8" y1="9" y2="13"/><line x1="15" x2="15.01" y1="12" y2="12"/><line x1="18" x2="18.01" y1="10" y2="10"/><path d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z"/></symbol>
-        <symbol id="i-feather" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.086 18.412A2 2 0 0112.67 19H5v-7.672a2 2 0 01.586-1.414L11.75 3.75a6 6 0 118.49 8.49z"/><path d="M16 8 2 22"/><path d="M17.488 15H9"/></symbol>
-        <symbol id="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></symbol>
-        <symbol id="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></symbol>
-        <symbol id="i-github" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"/><path d="M9 18c-4.51 2-5-2-7-2"/></symbol>
-        <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></symbol>
-        <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/></symbol>
-        <symbol id="i-keyboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 8h.01"/><path d="M12 12h.01"/><path d="M14 8h.01"/><path d="M16 12h.01"/><path d="M18 8h.01"/><path d="M6 8h.01"/><path d="M7 16h10"/><path d="M8 12h.01"/><rect width="20" height="16" x="2" y="4" rx="2"/></symbol>
-    </svg>
-
-    <a href="#main-content" class="skip-link">Skip to content</a>
-
-    <div id="app">
-        <!-- Navigation -->
-        <nav class="navbar">
-            <div class="nav-container">
-                <a href="#" class="logo">
-                    <svg class="logo-mark" aria-hidden="true"><use href="#i-keyboard"/></svg>
-                    <span>Mechvibes-cbc</span>
-                </a>
-
-                <div class="nav-links">
-                    <a href="#features" class="nav-link">Features</a>
-                    <a href="#about" class="nav-link">About</a>
-                    <a href="#contact" class="nav-link">Contact</a>
-                </div>
-
-                <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle dark mode" aria-pressed="false">
-                    <svg class="icon icon-moon" aria-hidden="true"><use href="#i-moon"/></svg>
-                    <svg class="icon icon-sun" aria-hidden="true"><use href="#i-sun"/></svg>
-                </button>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Make your keyboard feel more like you. Meet the next chapter of Mechvibes-cbc: sound profiles, your favorite switches, and a quieter kind of desktop app." />
+    <meta name="theme-color" content="#f5f7fa" />
+    <meta property="og:title" content="Mechvibes-cbc — Good sound. Great feeling." />
+    <meta property="og:description" content="Mechanical keyboard sounds, without a new keyboard. Explore Mechvibes-cbc and the upcoming 3.0 release." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://mechvibes-cbc.pages.dev/" />
+    <link rel="canonical" href="https://mechvibes-cbc.pages.dev/" />
+    <link rel="icon" href="./mark.svg" type="image/svg+xml" />
+    <link rel="preload" href="./fonts/inter.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./theme-init.js"></script>
+    <title>Mechvibes-cbc — Good sound. Great feeling.</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <header class="site-header">
+      <nav class="navigation wrap" aria-label="Main navigation">
+        <a href="#" class="wordmark" aria-label="Mechvibes-cbc home"
+          ><img src="./mark.svg" width="32" height="32" alt="" /><span>Mechvibes<span class="brand-edition">cbc</span></span></a
+        >
+        <div class="nav-links"><a href="#experience">Experience</a><a href="#next">What’s new</a><a href="#download">Download</a></div>
+        <button id="themeToggle" class="theme-toggle" type="button" aria-label="Change color theme">Theme: System</button>
+      </nav>
+    </header>
+    <main id="main-content" tabindex="-1">
+      <section class="hero wrap" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <a href="#next" class="eyebrow"><span class="status-dot"></span> THE NEXT CHAPTER · 3.0 BETA <span aria-hidden="true">↗</span></a>
+          <h1 id="hero-title">Good sound.<br /><span>Great feeling.</span></h1>
+          <p class="hero-description">A little personality for every keystroke. Bring mechanical keyboard sounds to the keyboard you already love.</p>
+          <div class="hero-actions">
+            <a id="downloadBtn" class="button button-primary" href="https://github.com/omnizs38/mechvibes-cbc/releases"
+              ><span class="btn-label">Get Mechvibes</span><span aria-hidden="true">↗</span></a
+            >
+            <a class="button button-text" href="#experience">Try the sound <span aria-hidden="true">↓</span></a>
+          </div>
+          <p class="download-note"><span class="btn-note">Latest published release</span> <span aria-hidden="true">·</span> Free &amp; open source</p>
+        </div>
+        <div id="experience" class="experience glass" role="region" aria-labelledby="demo-title">
+          <div class="demo-top">
+            <div>
+              <span class="small-label">A LITTLE PREVIEW</span>
+              <h2 id="demo-title">Find your rhythm.</h2>
             </div>
-        </nav>
-
-        <main id="main-content">
-            <!-- Hero -->
-            <section class="hero">
-                <div class="container">
-                    <div class="hero-content">
-                        <h1 class="hero-title">
-                            The sound of precision
-                        </h1>
-                        <p class="hero-subtitle">
-                            Ultra-low latency mechanical keyboard sound engine for Windows.
-                            Feel every keystroke with authentic switch sounds.
-                        </p>
-
-                        <div class="hero-buttons">
-                            <a href="https://github.com/omnizs38/mechvibes-cbc/releases" data-gh-link="releases" class="btn btn-primary" id="downloadBtn">
-                                <svg class="btn-icon" aria-hidden="true"><use href="#i-download"/></svg>
-                                <span class="btn-text">
-                                    <span class="btn-label">Download</span>
-                                    <span class="btn-note"></span>
-                                </span>
-                            </a>
-                            <a href="https://github.com/omnizs38/mechvibes-cbc" data-gh-link="repo" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
-                                <svg class="btn-icon" aria-hidden="true"><use href="#i-github"/></svg>
-                                <span class="btn-text"><span class="btn-label">GitHub</span></span>
-                            </a>
-                        </div>
-
-                        <div class="hero-meta">
-                            <div class="meta-item">
-                                <span class="meta-label">Latest Release</span>
-                                <span class="meta-value is-loading" data-gh="version">&mdash;</span>
-                            </div>
-                            <div class="meta-item">
-                                <span class="meta-label">License</span>
-                                <span class="meta-value is-loading" data-gh="license">MPL-2.0</span>
-                            </div>
-                            <div class="meta-item">
-                                <span class="meta-label">Status</span>
-                                <span class="meta-value is-loading" data-gh="status">Open Source</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Features -->
-            <section id="features" class="section-features">
-                <div class="container">
-                    <h2 class="section-heading">Why Mechvibes-cbc</h2>
-
-                    <div class="features-list">
-                        <div class="feature-item">
-                            <div class="feature-icon">
-                                <svg aria-hidden="true"><use href="#i-zap"/></svg>
-                            </div>
-                            <h3>Ultra-Low Latency</h3>
-                            <p>Real-time processing means your sounds keep up with your typing. Zero perceptible delay.</p>
-                        </div>
-
-                        <div class="feature-item">
-                            <div class="feature-icon">
-                                <svg aria-hidden="true"><use href="#i-sliders"/></svg>
-                            </div>
-                            <h3>Fully Customizable</h3>
-                            <p>Adjust profiles, volume, and effects. Make it exactly how you want it to sound.</p>
-                        </div>
-
-                        <div class="feature-item">
-                            <div class="feature-icon">
-                                <svg aria-hidden="true"><use href="#i-volume"/></svg>
-                            </div>
-                            <h3>Premium Sounds</h3>
-                            <p>High-quality samples from real mechanical keyboards. Authentic and satisfying.</p>
-                        </div>
-
-                        <div class="feature-item">
-                            <div class="feature-icon">
-                                <svg aria-hidden="true"><use href="#i-code"/></svg>
-                            </div>
-                            <h3>Open Source</h3>
-                            <p>Fully transparent. Fork it, modify it, or contribute. Your keyboard, your rules.</p>
-                        </div>
-
-                        <div class="feature-item">
-                            <div class="feature-icon">
-                                <svg aria-hidden="true"><use href="#i-gamepad"/></svg>
-                            </div>
-                            <h3>Gaming Ready</h3>
-                            <p>Optimized for competitive gaming. Enjoy the sound without impacting performance.</p>
-                        </div>
-
-                        <div class="feature-item">
-                            <div class="feature-icon">
-                                <svg aria-hidden="true"><use href="#i-feather"/></svg>
-                            </div>
-                            <h3>Lightweight</h3>
-                            <p>Minimal resource usage. Runs perfectly on any Windows system without slowdown.</p>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- About -->
-            <section id="about" class="section-about">
-                <div class="container">
-                    <div class="about-grid">
-                        <div class="about-text">
-                            <h2>Built for mechanical keyboard enthusiasts</h2>
-                            <p>
-                                This is a fork of Mechvibes, the mechanical keyboard sound engine
-                                Hai Nguyen released in 2021 under the MPL-2.0. It keeps the idea and
-                                rebuilds the software: a TypeScript codebase on a current Electron
-                                runtime, a reworked low-latency audio path, and a native v4 soundpack
-                                format.
-                            </p>
-                            <p>
-                                It is a young project and the numbers below say exactly where it
-                                stands - no rounding up. Everything is open source, so read the code,
-                                open an issue, or fork it again.
-                            </p>
-                        </div>
-
-                        <div class="about-stats">
-                            <div class="stat-card">
-                                <div class="stat-number is-loading" data-gh="release-count">&mdash;</div>
-                                <div class="stat-label">Releases</div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-number is-loading" data-gh="updated">&mdash;</div>
-                                <div class="stat-label">Last Updated</div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-number is-loading" data-gh="platforms">&mdash;</div>
-                                <div class="stat-label">Builds</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Releases -->
-            <section class="section-releases">
-                <div class="container">
-                    <h2 class="section-heading">Latest Release</h2>
-
-                    <div id="release-card" class="release-card is-loading">
-                        <div class="release-header">
-                            <div>
-                                <h3 id="releaseName" class="is-loading">Loading&hellip;</h3>
-                                <time id="releaseDate" class="release-date"></time>
-                            </div>
-                            <a id="releaseLink" href="https://github.com/omnizs38/mechvibes-cbc/releases" data-gh-link="releases" target="_blank" rel="noopener noreferrer" class="release-link">View on GitHub</a>
-                        </div>
-                        <div id="releaseBody" class="release-body"></div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Contact -->
-            <section id="contact" class="section-contact">
-                <div class="container">
-                    <h2 class="section-heading">Get in touch</h2>
-
-                    <div class="contact-links">
-                        <a href="https://github.com/omnizs38/mechvibes-cbc" data-gh-link="repo" target="_blank" rel="noopener noreferrer" class="contact-item">
-                            <svg class="contact-svg" aria-hidden="true"><use href="#i-github"/></svg>
-                            <span class="contact-icon">GitHub</span>
-                            <span class="contact-desc">View source code and contribute</span>
-                        </a>
-                        <a href="https://github.com/omnizs38/mechvibes-cbc/issues" data-gh-link="issues" target="_blank" rel="noopener noreferrer" class="contact-item">
-                            <svg class="contact-svg" aria-hidden="true"><use href="#i-alert"/></svg>
-                            <span class="contact-icon">Issues</span>
-                            <span class="contact-desc">Report bugs or request features</span>
-                        </a>
-                        <a href="https://github.com/omnizs38/mechvibes-cbc/releases" data-gh-link="releases" target="_blank" rel="noopener noreferrer" class="contact-item">
-                            <svg class="contact-svg" aria-hidden="true"><use href="#i-download"/></svg>
-                            <span class="contact-icon">Releases</span>
-                            <span class="contact-desc">Download available versions</span>
-                        </a>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Footer -->
-            <footer class="footer">
-                <div class="container">
-                    <div class="footer-content">
-                        <p>&copy; 2021&ndash;<span data-gh="year">2026</span> Mechvibes-cbc contributors. Licensed under MPL-2.0.</p>
-                        <div class="footer-links">
-                            <a href="https://github.com/omnizs38/mechvibes-cbc" data-gh-link="repo" target="_blank" rel="noopener noreferrer">GitHub</a>
-                            <a href="https://github.com/omnizs38/mechvibes-cbc#readme" data-gh-link="readme" target="_blank" rel="noopener noreferrer">Documentation</a>
-                            <a href="https://github.com/omnizs38/mechvibes-cbc/blob/main/LICENSE" data-gh-link="license" target="_blank" rel="noopener noreferrer">License</a>
-                        </div>
-                    </div>
-                </div>
-            </footer>
-        </main>
-    </div>
-
+            <span class="demo-dot" aria-hidden="true"></span>
+          </div>
+          <div class="sound-selector" role="group" aria-label="Preview sound character">
+            <button type="button" disabled data-tone="soft" aria-pressed="true">Soft</button><button type="button" disabled data-tone="crisp" aria-pressed="false">Crisp</button
+            ><button type="button" disabled data-tone="deep" aria-pressed="false">Deep</button>
+          </div>
+          <label class="sr-only" for="demoText">Type here to preview the sound</label>
+          <textarea id="demoText" readonly rows="2" maxlength="300" spellcheck="false" autocomplete="off" placeholder="Make a little noise…"></textarea>
+          <div id="previewKeys" class="keyboard" role="group" aria-label="Clickable sound preview keyboard"></div>
+          <div class="demo-controls">
+            <button id="demoToggle" disabled class="button button-small" type="button" aria-pressed="false">Enable sound</button
+            ><label for="demoVolume">Volume<input type="range" id="demoVolume" disabled min="0" max="100" value="35" /></label>
+          </div>
+          <p id="demoStatus" class="demo-status" role="status" aria-live="polite">Sound is off. Turn it on, then type or tap a key.</p>
+          <noscript><p class="demo-status">Enable JavaScript to use the sound preview. Desktop downloads still work.</p></noscript>
+          <p class="privacy-note">Synthesized browser demo, not desktop sound samples.<br />Your typing stays here. Nothing is recorded or sent.</p>
+        </div>
+      </section>
+      <div class="quiet-divider wrap"><span>YOUR KEYBOARD. A DIFFERENT FEEL.</span><span>Windows · macOS · Linux</span></div>
+      <section id="next" class="section wrap" aria-labelledby="next-title">
+        <div class="section-heading">
+          <div>
+            <span class="small-label">BUILT AROUND YOUR DAY</span>
+            <h2 id="next-title">Less setup.<br />More you.</h2>
+          </div>
+          <p>3.0 is the next step, currently in beta development. Familiar sounds, with more thoughtful ways to make them yours.</p>
+        </div>
+        <div class="feature-grid">
+          <article class="feature feature-wide glass">
+            <div class="feature-copy">
+              <span class="feature-number">01 / PROFILES</span>
+              <h3>A sound for every mood.</h3>
+              <p>Keep your soundpack, volume and output together. Save a quiet-work setup, a crisp writing setup, or whatever feels right.</p>
+              <span class="subtle-tag">New in 3.0</span>
+            </div>
+            <div class="profile-illustration" role="img" aria-label="Example sound profiles">
+              <div>
+                <span class="profile-symbol">◌</span><span>Quiet work<small>Soft sound · 30%</small></span
+                ><span class="profile-check">✓</span>
+              </div>
+              <div>
+                <span class="profile-symbol">✳</span><span>Writing mode<small>Crisp sound · 65%</small></span>
+              </div>
+            </div>
+          </article>
+          <article class="feature glass">
+            <span class="feature-number">02 / YOUR COLLECTION</span>
+            <h3>Keep the good ones close.</h3>
+            <p>Favorite your soundpacks. Search by name or group. Find the right feel without digging through folders.</p>
+            <div class="favorite-example" aria-hidden="true"><span>★</span> Your favorites, one click away.</div>
+          </article>
+          <article class="feature glass">
+            <span class="feature-number">03 / A QUIETER APP</span>
+            <h3>There when you want it.</h3>
+            <p>Mute from the app, tray or Ctrl + Shift + M. Choose an audio output. Let the rest stay out of your way.</p>
+            <div class="shortcut" aria-label="Control Shift M"><kbd>ctrl</kbd><kbd>shift</kbd><kbd>M</kbd></div>
+          </article>
+          <article class="feature feature-wide glass">
+            <div class="feature-copy">
+              <span class="feature-number">04 / YOURS TO KEEP</span>
+              <h3>Small files. Familiar settings.</h3>
+              <p>Export your profiles as a readable JSON backup. Import them on another setup without overwriting existing profiles. Sound files remain separate.</p>
+              <a href="https://github.com/omnizs38/mechvibes-cbc" class="inline-link">Explore the open-source project <span aria-hidden="true">↗</span></a>
+            </div>
+            <div class="file-illustration" aria-hidden="true"><span>{ }</span><strong>mechvibes-profiles.json</strong><small>Portable preferences. No account.</small></div>
+          </article>
+        </div>
+      </section>
+      <section id="download" class="download-section section wrap" aria-labelledby="download-title">
+        <div class="download-panel glass">
+          <span class="small-label">MAKE YOURSELF AT HOME</span>
+          <h2 id="download-title">Your next favorite<br />keyboard is already yours.</h2>
+          <p>Pick your platform. The links below always follow actual published release assets — not an unreleased version.</p>
+          <div class="platform-downloads">
+            <a class="platform-card" data-platform="windows" href="https://github.com/omnizs38/mechvibes-cbc/releases"
+              ><span class="platform-mark" aria-hidden="true">⊞</span><strong>Windows</strong><span class="asset-note">View releases</span><span class="platform-arrow" aria-hidden="true">↗</span></a
+            >
+            <a class="platform-card" data-platform="mac" href="https://github.com/omnizs38/mechvibes-cbc/releases"
+              ><span class="platform-mark" aria-hidden="true">⌘</span><strong>macOS</strong><span class="asset-note">View releases</span><span class="platform-arrow" aria-hidden="true">↗</span></a
+            >
+            <a class="platform-card" data-platform="linux" href="https://github.com/omnizs38/mechvibes-cbc/releases"
+              ><span class="platform-mark" aria-hidden="true">&gt;_</span><strong>Linux</strong><span class="asset-note">View releases</span><span class="platform-arrow" aria-hidden="true">↗</span></a
+            >
+          </div>
+          <p id="releaseStatus" class="release-status" role="status">Fetching published release information…</p>
+          <button id="retryRelease" class="inline-link" type="button" hidden>Retry release information</button>
+          <p class="compatibility">Desktop only. Intel macOS builds may require Rosetta on Apple Silicon. Linux global input support depends on your desktop session; Wayland may restrict it.</p>
+          <a class="inline-link" href="https://github.com/omnizs38/mechvibes-cbc/releases">All releases, checksums &amp; source <span aria-hidden="true">↗</span></a>
+        </div>
+      </section>
+      <section class="details-section wrap" aria-label="Release notes and questions">
+        <div class="release-notes">
+          <span class="small-label">FROM THE REPOSITORY</span>
+          <h2>What’s shipping.</h2>
+          <div id="release-card">
+            <div class="release-header">
+              <h3 id="releaseName">Latest published release</h3>
+              <time id="releaseDate"></time>
+            </div>
+            <div id="releaseBody"><p>Open GitHub for the latest release notes.</p></div>
+            <a id="releaseLink" class="inline-link" href="https://github.com/omnizs38/mechvibes-cbc/releases">Read on GitHub ↗</a>
+          </div>
+        </div>
+        <div class="faq">
+          <span class="small-label">A FEW GOOD QUESTIONS</span>
+          <h2>Good to know.</h2>
+          <details>
+            <summary>Is 3.0 available to download?</summary>
+            <p>3.0 is in beta development. Download cards show the latest published release available for each platform. An unpublished build is never presented as a download.</p>
+          </details>
+          <details>
+            <summary>Does this change my keyboard?</summary>
+            <p>No hardware changes. The desktop app plays sound in response to global input while it is running. You can mute it or quit whenever you like.</p>
+          </details>
+          <details>
+            <summary>Does the demo record what I type?</summary>
+            <p>No. The preview processes keys only inside its input field, in your browser. Text is not saved or transmitted, and no microphone access is needed.</p>
+          </details>
+          <details>
+            <summary>What about existing soundpacks?</summary>
+            <p>Existing supported soundpacks stay compatible. Profile backups contain settings, not audio files. Install the corresponding soundpacks before applying imported profiles.</p>
+          </details>
+          <details>
+            <summary>Who is behind the project?</summary>
+            <p>Mechvibes-cbc builds on Hai Nguyen’s original MIT-licensed Mechvibes. Fork modifications use MPL-2.0. Explore the repository to contribute or report a problem.</p>
+          </details>
+        </div>
+      </section>
+    </main>
+    <footer class="site-footer wrap">
+      <a href="#" class="wordmark"
+        ><img src="./mark.svg" width="28" height="28" alt="" /><span>Mechvibes<span class="brand-edition">cbc</span></span></a
+      >
+      <p>A little more feeling, one key at a time.</p>
+      <div>
+        <a href="https://github.com/omnizs38/mechvibes-cbc">Source</a><a href="https://github.com/omnizs38/mechvibes-cbc/issues">Feedback</a
+        ><a href="https://github.com/omnizs38/mechvibes-cbc/blob/main/NOTICE">Credits &amp; license</a>
+      </div>
+      <small>© <span id="year">2026</span> Mechvibes-cbc contributors</small>
+    </footer>
+    <noscript><p class="noscript-note">JavaScript is off. The download links still open GitHub releases; the interactive sound preview requires JavaScript.</p></noscript>
     <script src="./app.js" type="module"></script>
-</body>
+  </body>
 </html>

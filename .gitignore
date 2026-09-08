@@ -21,3 +21,6 @@ src/renderer-dist
 # Verified build-time prerequisite cache (never commit executable payloads)
 build/vendor/
 dist-merged/
+# Browser regression test artifacts
+playwright-report/
+test-results/
