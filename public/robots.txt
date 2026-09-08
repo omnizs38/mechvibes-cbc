@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://mechvibes-cbc.pages.dev/sitemap.xml

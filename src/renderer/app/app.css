@@ -243,3 +243,10 @@
 .app-footer button:hover {
   color: var(--accent);
 }
+
+.quick-mute { margin-left: auto; flex-shrink: 0; }
+.profile-create { display: flex; gap: 8px; margin-top: 12px; }
+.profile-create input { min-width: 0; }
+.profile-list { list-style: none; padding: 0; margin: 12px 0; }
+.profile-list li { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.profile-list li > div { min-width: 0; flex: 1; display: grid; overflow-wrap: anywhere; }

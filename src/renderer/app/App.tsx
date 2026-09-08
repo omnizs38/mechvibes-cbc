@@ -4,6 +4,7 @@ import { readBoolean, store } from '../shared/store';
 import { Banners } from './components/Banners';
 import { Footer } from './components/Footer';
 import { PreferencesCard } from './components/PreferencesCard';
+import { ProfilesCard } from './components/ProfilesCard';
 import { SoundCard } from './components/SoundCard';
 import { SoundpackCard } from './components/SoundpackCard';
 import { StatusBar } from './components/StatusBar';
@@ -82,6 +83,10 @@ export function App() {
           <span className="app-name">Mechvibes</span>
           <span className="app-subtitle">{subtitle}</span>
         </div>
+        <button className="btn quick-mute" type="button" aria-pressed={mechvibes.mechvibesMuted}
+          onClick={() => ipcRenderer.send('mechvibes-set-muted', !mechvibes.mechvibesMuted)}>
+          {mechvibes.mechvibesMuted ? 'Resume sound' : 'Mute sound'}
+        </button>
       </header>
 
       <Banners
@@ -116,6 +121,10 @@ export function App() {
           onVolumeWheel={mechvibes.nudgeVolume}
           outputs={outputs}
         />
+
+        <ProfilesCard packs={mechvibes.packs} packId={mechvibes.currentPackId} volume={mechvibes.volume}
+          outputDeviceId={mechvibes.savedOutputDeviceId.current} disabled={mechvibes.packLoading || mechvibes.pendingAction !== null}
+          apply={mechvibes.applyProfile} />
 
         <PreferencesCard
           trayIcon={trayIcon}

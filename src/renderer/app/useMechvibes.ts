@@ -8,6 +8,7 @@ import {
   onIpc,
   requireFromSrc,
 } from '../shared/electron';
+import { validateProfile, type SoundProfile } from '../../utils/profiles';
 import { readNumber, store } from '../shared/store';
 import type {
   DiscoveryError,
@@ -224,7 +225,9 @@ export function useMechvibes() {
       }
     };
 
-    void bootstrap();
+    void bootstrap().catch((error) => {
+      if (!disposed) { setPackLoading(false); setStatus(`Could not initialize soundpacks: ${errorMessage(error)}`, 'error'); }
+    });
 
     const disposeOnUnload = () => packManager.dispose();
     window.addEventListener('beforeunload', disposeOnUnload);
@@ -253,7 +256,9 @@ export function useMechvibes() {
       if (pressedKeys.size === 0) setKeyPressed(false);
     });
 
+    const offReset = onIpc<[]>('input-reset', () => { pressedKeys.clear(); setKeyPressed(false); });
     return () => {
+      offReset();
       offKeydown();
       offKeyup();
     };
@@ -296,6 +301,7 @@ export function useMechvibes() {
 
   // ------------------------------------------------------------------ volume
   const setVolume = useCallback((next: number) => {
+    if (!Number.isFinite(next)) return;
     const clamped = Math.min(VOLUME_MAX, Math.max(VOLUME_MIN, Math.round(next)));
     store.set(MV_VOL_LSID, clamped);
     setVolumeState(clamped);
@@ -394,10 +400,30 @@ export function useMechvibes() {
     store.set(OUTPUT_DEVICE_LSID, outputDeviceRef.current);
   }, []);
 
+  const applyProfile = useCallback(async (value: SoundProfile) => {
+    const profile = validateProfile(value);
+    if (!packs.some((pack) => pack.pack_id === profile.packId)) throw new Error('Install this profile’s soundpack first.');
+    const selected = await selectPack(profile.packId);
+    if (!selected || selected.pack_id !== currentPackRef.current?.pack_id) throw new Error('Profile soundpack could not be activated.');
+    let outputNote = '';
+    if (profile.outputDeviceId || outputDeviceRef.current) {
+      try { await applyOutputDeviceToPack(profile.outputDeviceId); }
+      catch {
+        await applyOutputDeviceToPack('');
+        outputNote = ' Saved output unavailable; using system default.';
+      }
+    }
+    setVolume(profile.volume);
+    return `Applied ${profile.name}.${outputNote}`;
+  }, [selectPack, applyOutputDeviceToPack, setVolume]);
+
+  const hasPack = useCallback(() => currentPackRef.current !== null, []);
+
   const currentPack = packList.find((pack) => pack.pack_id === currentPackId) ?? null;
 
   return {
     appVersion: APP_VERSION,
+    applyProfile,
     packs: packList,
     currentPack,
     currentPackId,
@@ -425,7 +451,7 @@ export function useMechvibes() {
     disableRemoteDebug,
     openDebugOptions,
     applyOutputDeviceToPack,
-    hasPack: () => currentPackRef.current !== null,
+    hasPack,
     savedOutputDeviceId: outputDeviceRef,
   };
 }

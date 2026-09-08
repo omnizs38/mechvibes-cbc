@@ -48,6 +48,30 @@ jobs:
       - name: Check audio scheduler budget
         run: npm run benchmark:audio
 
+  website:
+    name: Website browser and accessibility checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run build:web
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:site
+      - name: Upload browser test report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: website-browser-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
   dependency-review:
     name: Dependency review
     # Only meaningful on PRs — it diffs the base ref against the head ref.

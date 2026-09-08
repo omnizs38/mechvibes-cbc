@@ -45,7 +45,7 @@ export function Banners({
 
       {mechvibesMuted ? (
         <div className="banner" data-state="warning">
-          Mechvibes is muted from the tray menu.
+          Mechvibes is muted. Resume from the header, tray or Ctrl+Shift+M.
         </div>
       ) : null}
     </div>
