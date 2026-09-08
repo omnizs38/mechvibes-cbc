@@ -17,17 +17,24 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,html}\" \"tools/**/*.ts\" \"tests/**/*.ts\"",
     "diagnose": "npm run build:main && node tools/diagnose.js",
     "build:soundpack": "npm run build:main && node tools/soundpack-builder-cli.js",
-    "build:all": "npm run build:main && npm run build:renderer && electron-builder -wml",
-    "build:win": "npm run build:main && npm run build:renderer && electron-builder -w",
-    "build:mac": "npm run build:main && npm run build:renderer && electron-builder -m",
-    "build:linux": "npm run build:main && npm run build:renderer && electron-builder -l",
-    "build:win:dir": "npm run build:main && npm run build:renderer && electron-builder --win --x64 --dir --publish never",
+    "build:all": "npm run build:app && electron-builder -wml --publish never",
+    "build:win": "npm run build:app && electron-builder -w --publish never",
+    "build:mac": "npm run build:app && electron-builder -m --publish never",
+    "build:linux": "npm run build:app && electron-builder -l --publish never",
+    "build:win:dir": "npm run build:app && electron-builder --win --x64 --dir --publish never",
     "build:clean": "npm run build:main && node tools/clean-dist.js",
     "check": "npm run build:main && node tools/check-syntax.js",
     "test": "npm run build:main && npm run test:unit",
     "benchmark:audio": "npm run build:main && node tools/audio-benchmark.js",
     "verify": "npm run build:main && node tools/check-syntax.js && npm run test:unit && npm run typecheck && npm run build:renderer && node tools/check-renderer.js && npm run build:web",
-    "test:unit": "node tests/run.js && node --test tests/modernization.test.js"
+    "test:unit": "node tests/run.js && node --test tests/modernization.test.js tests/build.test.js",
+    "build:app": "npm run build:main && npm run build:renderer && node tools/check-renderer.js",
+    "package:all": "electron-builder -wml --publish never",
+    "package:win": "electron-builder -w --publish never",
+    "package:mac": "electron-builder -m --publish never",
+    "package:linux": "electron-builder -l --publish never",
+    "prepare:windows": "npm run build:main && node tools/prepare-windows-runtime.js",
+    "release:metadata": "node tools/release-metadata.js"
   },
   "engines": {
     "node": ">=22"
@@ -61,7 +68,19 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "include": "./build/installer.nsh"
+      "include": "./build/installer.nsh",
+      "perMachine": false,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": false,
+      "installerLanguages": [
+        "en_US",
+        "ru_RU"
+      ],
+      "displayLanguageSelector": false,
+      "warningsAsErrors": true,
+      "license": "LICENSE"
     },
     "win": {
       "target": [
@@ -109,7 +128,22 @@
         }
       ],
       "icon": "src/assets/icon.png"
-    }
+    },
+    "beforePack": "./tools/before-pack.js",
+    "extraFiles": [
+      {
+        "from": "LICENSE",
+        "to": "LICENSE.Mechvibes.txt"
+      },
+      {
+        "from": "LICENSE.MIT",
+        "to": "LICENSE.upstream.txt"
+      },
+      {
+        "from": "NOTICE",
+        "to": "NOTICE.Mechvibes.txt"
+      }
+    ]
   },
   "dependencies": {
     "@electron/remote": "^2.1.3",

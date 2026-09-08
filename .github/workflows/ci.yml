@@ -77,15 +77,15 @@ jobs:
         os: [windows-latest, macos-latest, ubuntu-latest]
         include:
           - os: windows-latest
-            build-cmd: npm run build:win -- --publish never
+            build-cmd: npm run package:win
             artifact-name: mechvibes-windows-x64
             artifact-path: dist/**/*.exe
           - os: macos-latest
-            build-cmd: npm run build:mac -- --publish never
+            build-cmd: npm run package:mac
             artifact-name: mechvibes-macos-x64
             artifact-path: dist/**/*.dmg
           - os: ubuntu-latest
-            build-cmd: npm run build:linux -- --publish never
+            build-cmd: npm run package:linux
             artifact-name: mechvibes-linux-x64
             artifact-path: |
               dist/**/*.deb
@@ -108,16 +108,40 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Run verification
         run: npm run verify
-      # electron-builder packages the emitted JavaScript, which is not
-      # committed: compile the main process and the React renderer first.
-      - name: Compile main process and renderer bundles
-        run: npm run build:main && npm run build:renderer
+      - name: Cache Electron and packaging downloads
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+            ~/Library/Caches/electron
+            ~/Library/Caches/electron-builder
+            ~/AppData/Local/electron/Cache
+            ~/AppData/Local/electron-builder/Cache
+          key: packaging-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: packaging-${{ runner.os }}-
+      - name: Cache pinned Windows prerequisite
+        if: matrix.os == 'windows-latest'
+        uses: actions/cache@v5
+        with:
+          path: build/vendor/vc_redist.x64.exe
+          key: vcredist-x64-${{ hashFiles('build/windows-runtime.json') }}
       - name: Build packages
         run: ${{ matrix.build-cmd }}
+      - name: Smoke-test Windows install, reinstall and uninstall
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: ./tools/smoke-nsis.ps1
+
+      - name: Generate verified release metadata
+        run: npm run release:metadata -- dist
       - name: Upload compiled artifacts
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.artifact-name }}
-          path: ${{ matrix.artifact-path }}
+          path: |
+            ${{ matrix.artifact-path }}
+            dist/SHA256SUMS.txt
+            dist/sbom.cdx.json
           if-no-files-found: error
           retention-days: 14

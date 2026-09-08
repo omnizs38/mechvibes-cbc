@@ -1,27 +1,20 @@
 'use strict';
 
-import * as fs from 'fs-extra';
-import * as path from 'path';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
-function emptyDist(distPath: string): void {
-  if (fs.existsSync(distPath)) {
-    fs.emptyDirSync(distPath);
-    console.log('Dist folder emptied successfully.');
-  } else {
-    console.log('Dist folder does not exist.');
-  }
+/** Resolve from this tool, never from an arbitrary caller's package.json. */
+export async function cleanDist(root = path.resolve(__dirname, '..')): Promise<void> {
+  const directory = path.join(root, 'dist');
+  // rm removes links rather than following them; recreation never empties a
+  // directory elsewhere, without traversing a dist symlink.
+  await fs.rm(directory, { recursive: true, force: true });
+  await fs.mkdir(directory, { recursive: true });
+  console.log('Project dist directory cleaned.');
 }
 
-// Check if package.json is in the current directory or in the parent directory
-const packageJsonPath = path.resolve(process.cwd(), 'package.json');
-const parentPackageJsonPath = path.resolve(process.cwd(), '../package.json');
-
-if (fs.existsSync(packageJsonPath)) {
-  console.log('package.json found in the current directory.');
-  emptyDist(path.resolve(process.cwd(), 'dist'));
-} else if (fs.existsSync(parentPackageJsonPath)) {
-  console.log('package.json found in the parent directory.');
-  emptyDist(path.resolve(process.cwd(), '../dist'));
-} else {
-  console.log('package.json not found.');
-}
+if (require.main === module)
+  cleanDist().catch((error) => {
+    console.error(error.message);
+    process.exitCode = 1;
+  });

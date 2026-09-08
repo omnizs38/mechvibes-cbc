@@ -231,3 +231,9 @@ Original project:
 https://github.com/hainguyents13/mechvibes
 
 Thanks to Hai Nguyen for creating the original Mechvibes project and to everyone who has contributed to both the upstream project and this fork.
+
+## Build and Windows installer details
+
+See [Build and NSIS maintenance](docs/build-and-nsis.md) for offline runtime
+prerequisites, installer behavior, Windows smoke tests, build-only/package-only
+commands, checksums and safe release reruns.

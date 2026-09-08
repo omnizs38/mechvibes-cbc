@@ -18,3 +18,6 @@ tools/**/*.js.map
 tests/**/*.js
 tests/**/*.js.map
 src/renderer-dist
+# Verified build-time prerequisite cache (never commit executable payloads)
+build/vendor/
+dist-merged/

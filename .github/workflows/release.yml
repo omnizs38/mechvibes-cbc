@@ -85,21 +85,21 @@ jobs:
         os: [windows-latest, macos-latest, ubuntu-latest]
         include:
           - os: windows-latest
-            build-cmd: npm run build:win -- --x64 --publish never
+            build-cmd: npm run package:win -- --x64
             artifact-name: windows-release-assets
             artifact-path: |
               dist/*.exe
               dist/*.blockmap
               dist/*.yml
           - os: macos-latest
-            build-cmd: npm run build:mac -- --x64 --publish never
+            build-cmd: npm run package:mac -- --x64
             artifact-name: macos-release-assets
             artifact-path: |
               dist/*.dmg
               dist/*.blockmap
               dist/*.yml
           - os: ubuntu-latest
-            build-cmd: npm run build:linux -- --x64 --publish never
+            build-cmd: npm run package:linux -- --x64
             artifact-name: linux-release-assets
             artifact-path: |
               dist/*.deb
@@ -128,37 +128,41 @@ jobs:
       # electron-builder packages the emitted JavaScript, which is not
       # committed: compile the main process and the React renderer first.
       - name: Compile main process and renderer bundles
-        run: npm run build:main && npm run build:renderer
+        run: npm run build:app
+
+      - name: Cache Electron and packaging downloads
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cache/electron
+            ~/.cache/electron-builder
+            ~/Library/Caches/electron
+            ~/Library/Caches/electron-builder
+            ~/AppData/Local/electron/Cache
+            ~/AppData/Local/electron-builder/Cache
+          key: packaging-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: packaging-${{ runner.os }}-
+      - name: Cache pinned Windows prerequisite
+        if: matrix.os == 'windows-latest'
+        uses: actions/cache@v5
+        with:
+          path: build/vendor/vc_redist.x64.exe
+          key: vcredist-x64-${{ hashFiles('build/windows-runtime.json') }}
 
       - name: Build release packages
         run: ${{ matrix.build-cmd }}
+
+      - name: Smoke-test Windows install, reinstall and uninstall
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: ./tools/smoke-nsis.ps1
 
       - name: Clean up temporary debug configurations to avoid conflicts
         shell: bash
         run: rm -f dist/builder-debug.yml || true
 
-      - name: Generate checksums and SBOM (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          Get-ChildItem dist -File |
-            Where-Object { $_.Name -ne "SHA256SUMS.txt" } |
-            Sort-Object Name |
-            ForEach-Object {
-              $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-              "$hash  $($_.Name)"
-            } | Set-Content dist/SHA256SUMS.txt -Encoding ascii
-          npm sbom --sbom-format cyclonedx > dist/sbom.cdx.json
-
-      - name: Generate checksums and SBOM (Posix)
-        if: matrix.os != 'windows-latest'
-        shell: bash
-        run: |
-          find dist -maxdepth 1 -type f ! -name "SHA256SUMS.txt" | sort | while read -r file; do
-            filename=$(basename "$file")
-            sha256sum "$file" | awk -v fn="$filename" '{print $1 "  " fn}' >> dist/SHA256SUMS.txt
-          done
-          npm sbom --sbom-format cyclonedx > dist/sbom.cdx.json
+      - name: Generate checksums and SBOM
+        run: npm run release:metadata -- dist
 
       - name: Upload compiled OS release assets
         uses: actions/upload-artifact@v7
@@ -222,31 +226,25 @@ jobs:
           name: linux-release-assets
           path: dist-merged
 
-      - name: Generate centralized multios SHA256SUMS manifest
-        shell: bash
-        run: |
-          cd dist-merged
-          rm -f SHA256SUMS.txt sbom.cdx.json builder-debug.yml
-          find . -maxdepth 1 -type f | sort | while read -r file; do
-            filename=$(basename "$file")
-            sha256sum "$file" | awk -v fn="$filename" '{print $1 "  " fn}' >> SHA256SUMS.txt
-          done
-          npm sbom --sbom-format cyclonedx > sbom.cdx.json || true
+      - name: Generate centralized metadata (SBOM first, then checksums)
+        run: npm run build:main && npm run release:metadata -- dist-merged
 
       - name: Stage release as a draft (always — never auto-publish)
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          # Re-running this workflow for the same tag (e.g. after a tag was
-          # re-pushed/force-updated to fix a bad commit) must not fail just
-          # because a draft release for that tag already exists from a
-          # previous attempt — `gh release create` errors out in that case.
-          # Delete any pre-existing release for this tag first so staging
-          # stays idempotent.
+          # Never delete or overwrite an already published release on reruns.
+          # A draft may be refreshed, retaining its notes and manual-publish gate.
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
-            echo "An existing release for ${GITHUB_REF_NAME} was found — removing it before re-staging."
-            gh release delete "${GITHUB_REF_NAME}" --yes --cleanup-tag=false
+            is_draft=$(gh release view "${GITHUB_REF_NAME}" --json isDraft --jq '.isDraft')
+            if [[ "$is_draft" != "true" ]]; then
+              echo "Refusing to modify published release ${GITHUB_REF_NAME}." >&2
+              exit 1
+            fi
+            gh release upload "${GITHUB_REF_NAME}" dist-merged/* --clobber
+            echo "### Existing draft refreshed; publication remains manual" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
           fi
 
           args=("${GITHUB_REF_NAME}" --verify-tag --generate-notes --title "Mechvibes ${GITHUB_REF_NAME}" --draft)
