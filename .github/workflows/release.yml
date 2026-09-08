@@ -150,7 +150,17 @@ jobs:
           key: vcredist-x64-${{ hashFiles('build/windows-runtime.json') }}
 
       - name: Build release packages
-        run: ${{ matrix.build-cmd }}
+        shell: bash
+        run: |
+          set -o pipefail
+          if ! ${{ matrix.build-cmd }} 2>&1 | tee package-build.log; then
+            details=$(tail -c 6000 package-build.log)
+            details="${details//'%'/'%25'}"
+            details="${details//$'\r'/'%0D'}"
+            details="${details//$'\n'/'%0A'}"
+            echo "::error title=Packaging failed::$details"
+            exit 1
+          fi
 
       - name: Smoke-test Windows install, reinstall and uninstall
         if: matrix.os == 'windows-latest'
