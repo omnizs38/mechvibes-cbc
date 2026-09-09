@@ -357,7 +357,8 @@ test('rejects unsafe or malformed soundpack configuration', () => {
     /unsafe/,
   );
   assert.throws(() => validateSoundpackConfig(validV4({ version: 99 })), /Unsupported/);
-  assert.throws(() => validateSoundpackConfig(validV4({ version: 1, name: 'bad', key_define_type: 'bad' })), /Invalid v1/); // v1 is now supported but must be valid format
+  assert.throws(() => validateSoundpackConfig(validV4({ version: 1, name: 'bad', key_define_type: 'bad' })), /Unsupported/); // v1 is no longer supported
+  assert.throws(() => validateSoundpackConfig(validV4({ version: 2 })), /Unsupported/); // v2 is no longer supported
   assert.throws(() => validateSoundpackConfig(validV3({ keys: { key: { keydown: { samples: ['a.wav'] } } } })), /invalid/);
   assert.throws(
     () =>
@@ -1271,10 +1272,10 @@ test('ships one React entry point per renderer window', async () => {
   for (const { name, callback } of tests) {
     try {
       await callback();
-      console.log(`✓ ${name}`);
+      console.log(`\u2713 ${name}`);
     } catch (error) {
       failures += 1;
-      console.error(`✗ ${name}`);
+      console.error(`\u2717 ${name}`);
       console.error(error && error.stack ? error.stack : error);
     }
   }
