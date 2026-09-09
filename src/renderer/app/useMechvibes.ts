@@ -64,7 +64,6 @@ export function useMechvibes() {
   const [activeVolume, setActiveVolume] = useState(true);
   const [systemMuted, setSystemMuted] = useState(false);
   const [mechvibesMuted, setMechvibesMuted] = useState(false);
-  const [remoteDebugInUse, setRemoteDebugInUse] = useState(false);
   const [keyPressed, setKeyPressed] = useState(false);
 
   const currentPackRef = useRef<SoundPack | null>(null);
@@ -267,7 +266,6 @@ export function useMechvibes() {
   // ------------------------------------------------------------- main events
   useEffect(() => {
     const unsubscribers = [
-      onIpc<[boolean]>('debug-in-use', (enabled) => setRemoteDebugInUse(Boolean(enabled))),
       onIpc<[string]>('input-hook-error', (message) =>
         setStatus(message || 'Global keyboard capture is unavailable.', 'error'),
       ),
@@ -381,14 +379,6 @@ export function useMechvibes() {
     );
   }, [runSoundpackAction]);
 
-  const disableRemoteDebug = useCallback(() => {
-    ipcRenderer.send('set-debug-options', { enabled: false });
-  }, []);
-
-  const openDebugOptions = useCallback(() => {
-    ipcRenderer.send('open-debug-options');
-  }, []);
-
   const applyOutputDeviceToPack = useCallback(async (deviceId: string) => {
     const pack = currentPackRef.current;
     if (!pack) throw new Error('No soundpack is active.');
@@ -440,7 +430,6 @@ export function useMechvibes() {
     systemVolume,
     systemMuted,
     mechvibesMuted,
-    remoteDebugInUse,
     keyPressed,
     soundpackActionStatus,
     pendingAction,
@@ -448,8 +437,6 @@ export function useMechvibes() {
     importPack,
     openPacksFolder,
     deleteCurrentPack,
-    disableRemoteDebug,
-    openDebugOptions,
     applyOutputDeviceToPack,
     hasPack,
     savedOutputDeviceId: outputDeviceRef,

@@ -91,8 +91,6 @@ export function App() {
 
       <Banners
         status={mechvibes.status}
-        remoteDebugInUse={mechvibes.remoteDebugInUse}
-        onDisableRemoteDebug={mechvibes.disableRemoteDebug}
         systemMuted={mechvibes.systemMuted}
         mechvibesMuted={mechvibes.mechvibesMuted}
       />
@@ -138,11 +136,7 @@ export function App() {
 
       <StatusBar version={mechvibes.appVersion} updater={updater} />
 
-      <Footer
-        debugOptionsAvailable={true}
-        onOpenDebugOptions={mechvibes.openDebugOptions}
-        onOpenExternal={openExternal}
-      />
+      <Footer onOpenExternal={openExternal} />
     </div>
   );
 }
