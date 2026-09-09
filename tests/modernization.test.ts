@@ -366,8 +366,8 @@ test('local source reader rejects oversized files before allocating payload', as
 
 test('all renderer windows use the existing shared preload and absolute paths', () => {
   const main = fs.readFileSync(path.join(__dirname, '../src/main.ts'), 'utf8');
-  assert.equal((main.match(/preload: path.join\(__dirname, 'preload.js'\)/g) ?? []).length, 4);
-  for (const window of ['app', 'debug', 'editor', 'install']) {
+  assert.equal((main.match(/preload: path.join\(__dirname, 'preload.js'\)/g) ?? []).length, 3);
+  for (const window of ['app', 'editor', 'install']) {
     assert.ok(main.includes(`path.join(__dirname, 'renderer-dist', '${window}.html')`));
     const html = fs.readFileSync(path.join(__dirname, `../src/renderer/${window}.html`), 'utf8');
     assert.match(html, /script-src 'self' file:;/);
