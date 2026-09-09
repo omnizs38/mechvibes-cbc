@@ -86,7 +86,7 @@ test('Clicky Engine never mutates the caller input', () => {
 
 test('Clicky Engine rejects unsupported v1/v2 packs with a machine-readable code', () => {
   const v1 = () => convertToV4({ version: 1, name: 'legacy v1' });
-  assert.throws(v1, (error) => {
+  assert.throws(v1, (error: any) => {
     assert.equal(error.code, 'UNSUPPORTED_VERSION');
     assert.match(error.message, /no longer supported/);
     return true;
