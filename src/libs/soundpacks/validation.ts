@@ -1,12 +1,13 @@
 'use strict';
 
 import path from 'path';
-import { isLegacyV1Config, type LegacyV1Config } from './config-v1';
-import { isLegacyV2Config, type LegacyV2Config } from './config-v2';
 import { isLegacyV3Config, type LegacyV3Config } from './config-v3-legacy';
-import { convertV1ToV4, convertV2ToV4, convertV3LegacyToV4 } from './config-converter';
+import { convertV3LegacyToV4 } from './config-converter';
 
-const SUPPORTED_VERSIONS: ReadonlySet<number> = new Set([1, 2, 3, 4]);
+// Formats v1 and v2 are intentionally unsupported as of the Mechvibes 3.0
+// beta. Only the modern v3/v4 schema and the original-mechvibes v3-legacy
+// format (converted to v4) are accepted.
+const SUPPORTED_VERSIONS: ReadonlySet<number> = new Set([3, 4]);
 export const SUPPORTED_AUDIO_EXTENSIONS: ReadonlySet<string> = new Set([
   '.aac',
   '.flac',
@@ -326,33 +327,17 @@ export function validateSoundpackConfig(config: unknown): ValidatedSoundpackConf
   const version = Number(config['version']);
   if (!Number.isInteger(version) || !SUPPORTED_VERSIONS.has(version)) {
     throw new SoundpackValidationError(
-      `Unsupported soundpack config version: ${config['version']}.`,
+      `Unsupported soundpack config version: ${config['version']}. Formats v1 and v2 are no longer supported; convert the pack to v3 or v4.`,
       'UNSUPPORTED_VERSION',
     );
   }
 
-  // Convert legacy formats (v1, v2, v3-legacy) to modern v4
+  // Only legacy v3 (original mechvibes clips/cycles) needs conversion to v4.
+  // Modern v3 (identical to v4 in mechvibes-cbc) passes through unchanged.
   let normalizedConfig = config as AnyRecord;
-  
-  if (version === 1) {
-    if (!isLegacyV1Config(config)) {
-      throw new SoundpackValidationError('Invalid v1 soundpack config format.');
-    }
-    // Convert v1 → v4
-    normalizedConfig = convertV1ToV4(config as LegacyV1Config);
-  } else if (version === 2) {
-    if (!isLegacyV2Config(config)) {
-      throw new SoundpackValidationError('Invalid v2 soundpack config format.');
-    }
-    // Convert v2 → v4
-    normalizedConfig = convertV2ToV4(config as LegacyV2Config);
-  } else if (version === 3) {
-    // Check if it's legacy v3 or modern v3
-    if (isLegacyV3Config(config)) {
-      // Legacy v3 (from original mechvibes with clips/cycles)
-      normalizedConfig = convertV3LegacyToV4(config as LegacyV3Config);
-    }
-    // Modern v3 (same as v4 in mechvibes-cbc) will pass through to validateModernConfig
+
+  if (version === 3 && isLegacyV3Config(config)) {
+    normalizedConfig = convertV3LegacyToV4(config as LegacyV3Config);
   }
 
   const name = requireNonEmptyString(normalizedConfig['name'], 'name');
@@ -360,7 +345,7 @@ export function validateSoundpackConfig(config: unknown): ValidatedSoundpackConf
     throw new SoundpackValidationError(`name must not exceed ${MAX_NAME_LENGTH} characters.`);
   }
 
-  // All converted configs are now in v4 format
+  // All accepted configs are normalized to v4 format.
   return validateModernConfig(normalizedConfig, name, 4);
 }
 
