@@ -76,13 +76,27 @@ test('normal replacement and first installation both commit successfully', () =>
   }
 });
 
-test('unstreamable responses are rejected without calling arrayBuffer', async () => {
+test('unstreamable responses fall back to arrayBuffer and still enforce the limit', async () => {
+  const within = {
+    headers: { get: () => null },
+    arrayBuffer: async () => Uint8Array.from([1, 2, 3]).buffer,
+  };
+  assert.deepEqual(await readResponseBuffer(within, 4), Buffer.from([1, 2, 3]));
+
+  const oversized = {
+    headers: { get: () => null },
+    arrayBuffer: async () => new ArrayBuffer(8),
+  };
+  await assert.rejects(readResponseBuffer(oversized, 4), /exceeds/);
+});
+
+test('an oversized advertised Content-Length is rejected before buffering', async () => {
   let allocated = false;
   const response = {
-    headers: { get: () => '1' },
-    arrayBuffer: async () => { allocated = true; return new ArrayBuffer(1); },
+    headers: { get: () => '9' },
+    arrayBuffer: async () => { allocated = true; return new ArrayBuffer(9); },
   };
-  await assert.rejects(readResponseBuffer(response, 4), /streaming/);
+  await assert.rejects(readResponseBuffer(response, 4), /exceeds/);
   assert.equal(allocated, false);
 });
 

@@ -191,12 +191,16 @@ export async function readResponseBuffer(
   }
 
   if (!response.body || typeof response.body.getReader !== 'function') {
-    // A real bodyless WHATWG Response is empty. Do not fall back to
-    // arrayBuffer(): it allocates the entire untrusted body before checking.
-    if (response.body === null && (advertisedSize === null || advertisedSize === 0)) {
-      return Buffer.alloc(0);
+    // No readable stream is available: decoded audio, data: URL responses and
+    // mocked fetch expose only arrayBuffer(). Materialize it but still enforce
+    // the limit. The decimal Content-Length pre-check above already rejects an
+    // oversized advertised size before this allocation, and the materialized
+    // length is re-checked so a missing/lying header cannot bypass the cap.
+    const buffer = Buffer.from(await response.arrayBuffer());
+    if (buffer.length > maxBytes) {
+      throw new Error(`Response exceeds the ${maxBytes} byte limit.`);
     }
-    throw new Error('A streaming response body is required.');
+    return buffer;
   }
 
   const reader = response.body.getReader();
