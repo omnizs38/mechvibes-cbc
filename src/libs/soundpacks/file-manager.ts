@@ -179,21 +179,45 @@ function resolveContainedFile(folder: string, file: unknown): string | null {
   return realCandidate;
 }
 
+// Read an already path-validated file through a single descriptor so the file
+// cannot be swapped between the size check and the read (TOCTOU / CWE-367,
+// js/file-system-race). fstat + read operate on the same open descriptor.
+function readContainedAudioFile(filePath: string, file: string): string | null {
+  const mimeType = mime.lookup(filePath);
+  if (!mimeType || !String(mimeType).startsWith('audio/')) {
+    throw new Error(`Unsupported audio type in "${file}".`);
+  }
+  const fd = fs.openSync(filePath, 'r');
+  try {
+    const stat = fs.fstatSync(fd);
+    if (!stat.isFile()) {
+      return null;
+    }
+    if (stat.size > MAX_FILE_BYTES) {
+      throw new Error(`Soundpack file exceeds the ${MAX_FILE_BYTES} byte limit.`);
+    }
+    const buffer = Buffer.alloc(stat.size);
+    let total = 0;
+    while (total < buffer.length) {
+      const bytesRead = fs.readSync(fd, buffer, total, buffer.length - total, null);
+      if (!bytesRead) break;
+      total += bytesRead;
+    }
+    if (total !== stat.size) {
+      throw new Error('Soundpack file changed while reading.');
+    }
+    return `data:${mimeType};base64,${buffer.toString('base64')}`;
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
 export function GetFileFromFolder(folder: string, file: string): string | null {
   const filePath = resolveContainedFile(folder, file);
   if (filePath === null) {
     return null;
   }
-  const stat = fs.statSync(filePath);
-  if (stat.size > MAX_FILE_BYTES) {
-    throw new Error(`Soundpack file exceeds the ${MAX_FILE_BYTES} byte limit.`);
-  }
-  const mimeType = mime.lookup(filePath);
-  if (!mimeType || !String(mimeType).startsWith('audio/')) {
-    throw new Error(`Unsupported audio type in "${file}".`);
-  }
-  const value = `data:${mimeType};base64,${fs.readFileSync(filePath, 'base64')}`;
-  return value;
+  return readContainedAudioFile(filePath, file);
 }
 
 export function GetSoundpackFile(absPath: string, sound: unknown): string {
