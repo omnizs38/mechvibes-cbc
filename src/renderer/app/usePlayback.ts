@@ -10,7 +10,7 @@ const latencyTracker = new LatencyTracker();
 export interface PlaybackRefs {
   volumeRef: { readonly current: number };
   systemVolumeRef: { readonly current: number };
-  activeVolumeRef: { readonly current: number };
+  activeVolumeRef: { readonly current: boolean };
   systemMutedRef: { readonly current: boolean };
   mechvibesMutedRef: { readonly current: boolean };
 }

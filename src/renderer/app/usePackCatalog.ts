@@ -1,23 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ipcRenderer, log } from '../shared/electron';
+import { ipcRenderer, log, nodePath } from '../shared/electron';
 import { store } from '../shared/store';
 import type { DiscoveryError, SoundPack } from '../shared/types';
-import { SoundpackManager } from '../../libs/soundpacks/pack-manager';
+import { SoundpackManager, type LoadableSoundpack } from '../../libs/soundpacks/pack-manager';
 import { discoverSoundpacks } from '../../libs/soundpacks/registry';
 import { chooseRandomPackIndex } from '../../utils/random-pack';
-import { nodePath } from '../shared/electron';
-
-const OFFICIAL_PACKS_DIR = nodePath.join(
-  // eslint-disable-next-line
-  ...([] as string[]),
-);
 
 export type StatusSetter = (text: string, state?: 'info' | 'success' | 'warning' | 'error') => void;
 
 // Audio state lives outside React: it must survive re-renders and stay unique
 // for the lifetime of the window.
 const packs: SoundPack[] = [];
-const packManager = new SoundpackManager(packs);
+// Discovered packs always expose LoadSounds/UnloadSounds at runtime; the shared
+// SoundPack type marks them optional, so adapt to the manager's stricter shape.
+const packManager = new SoundpackManager(packs as unknown as LoadableSoundpack[]);
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -97,7 +93,7 @@ export function usePackCatalog(deps: {
   );
 
   const selectRandomPack = useCallback(() => {
-    const index = chooseRandomPackIndex(packs, currentPackRef.current?.pack_id ?? null);
+    const index = chooseRandomPackIndex(packs, currentPackRef.current?.pack_id ?? undefined);
     if (index === null) return;
     const pack = packs[index];
     if (pack) void selectPack(pack.pack_id);
