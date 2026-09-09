@@ -1,7 +1,10 @@
 import fs from 'node:fs/promises';
+import { constants } from 'node:fs';
 import { MAX_PROFILE_BYTES, parseProfileBackup } from '../utils/profiles';
 export async function readProfileBackup(file: string) {
-  const handle = await fs.open(file, 'r');
+  // Nonblocking open lets fstat reject FIFOs without waiting for a writer.
+  // Regular files are unaffected; all reads remain bound to this descriptor.
+  const handle = await fs.open(file, constants.O_RDONLY | constants.O_NONBLOCK);
   try {
     const stat = await handle.stat();
     if (!stat.isFile() || stat.size > MAX_PROFILE_BYTES)

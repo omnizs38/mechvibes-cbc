@@ -126,11 +126,16 @@ export function parseContentLength(response: SizedResponse | null | undefined): 
   if (rawLength === null || rawLength === undefined) {
     return null;
   }
+  if (!/^[0-9]+$/.test(rawLength)) return null;
   const value = Number(rawLength);
-  return Number.isFinite(value) && value >= 0 ? value : null;
+  return Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
 
 export function enforceDownloadSize({ fileBytes, totalBytes }: DownloadSizeInput): void {
+  if (!Number.isSafeInteger(fileBytes) || fileBytes < 0 ||
+    !Number.isSafeInteger(totalBytes) || totalBytes < fileBytes) {
+    throw new Error('Invalid download byte count.');
+  }
   if (fileBytes > MAX_FILE_BYTES) {
     throw new Error(`A soundpack file exceeds the ${MAX_FILE_BYTES} byte limit.`);
   }
@@ -144,7 +149,6 @@ export function commitDirectoryReplacement(
   { tempDirectory, installDirectory, backupDirectory }: DirectoryReplacement,
 ): void {
   let movedExisting = false;
-  let installedReplacement = false;
 
   try {
     if (fileSystem.existsSync(installDirectory)) {
@@ -152,12 +156,8 @@ export function commitDirectoryReplacement(
       movedExisting = true;
     }
     fileSystem.moveSync(tempDirectory, installDirectory, { overwrite: false });
-    installedReplacement = true;
-    if (movedExisting) {
-      fileSystem.removeSync(backupDirectory);
-    }
   } catch (error) {
-    if (installedReplacement || movedExisting) {
+    if (movedExisting) {
       fileSystem.removeSync(installDirectory);
     }
     if (movedExisting && fileSystem.existsSync(backupDirectory)) {
@@ -165,23 +165,38 @@ export function commitDirectoryReplacement(
     }
     throw error;
   }
+
+  // The replacement is committed. Cleanup can partially delete the backup:
+  // never remove a good installation to restore that now-incomplete backup.
+  if (movedExisting) {
+    try {
+      fileSystem.removeSync(backupDirectory);
+    } catch {
+      // Keep the installed pack; leftover .backup-* entries are ignored by
+      // discovery and can be removed manually once filesystem access recovers.
+    }
+  }
 }
 
 export async function readResponseBuffer(
   response: SizedResponse,
   maxBytes: number,
 ): Promise<Buffer> {
+  if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) {
+    throw new Error('Invalid response byte limit.');
+  }
   const advertisedSize = parseContentLength(response);
   if (advertisedSize !== null && advertisedSize > maxBytes) {
     throw new Error(`Response exceeds the ${maxBytes} byte limit.`);
   }
 
   if (!response.body || typeof response.body.getReader !== 'function') {
-    const buffer = Buffer.from(await response.arrayBuffer());
-    if (buffer.length > maxBytes) {
-      throw new Error(`Response exceeds the ${maxBytes} byte limit.`);
+    // A real bodyless WHATWG Response is empty. Do not fall back to
+    // arrayBuffer(): it allocates the entire untrusted body before checking.
+    if (response.body === null && (advertisedSize === null || advertisedSize === 0)) {
+      return Buffer.alloc(0);
     }
-    return buffer;
+    throw new Error('A streaming response body is required.');
   }
 
   const reader = response.body.getReader();
@@ -191,9 +206,8 @@ export async function readResponseBuffer(
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-      const chunk = Buffer.from(value);
-      receivedBytes += chunk.length;
-      if (receivedBytes > maxBytes) {
+      // Check before copying an oversized chunk into another allocation.
+      if (value.byteLength > maxBytes - receivedBytes) {
         try {
           await reader.cancel('Response is too large.');
         } catch {
@@ -201,7 +215,8 @@ export async function readResponseBuffer(
         }
         throw new Error(`Response exceeds the ${maxBytes} byte limit.`);
       }
-      chunks.push(chunk);
+      receivedBytes += value.byteLength;
+      chunks.push(Buffer.from(value));
     }
     return Buffer.concat(chunks, receivedBytes);
   } finally {

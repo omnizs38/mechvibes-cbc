@@ -27,7 +27,7 @@
     "test": "npm run build:main && npm run test:unit",
     "benchmark:audio": "npm run build:main && node tools/audio-benchmark.js",
     "verify": "npm run build:main && npm run build:web && node tools/check-syntax.js && npm run test:unit && npm run test:web && npm run typecheck && npm run build:renderer && node tools/check-renderer.js && node tools/check-site.js",
-    "test:unit": "node tests/run.js && node --test tests/modernization.test.js tests/build.test.js tests/profiles.test.js",
+    "test:unit": "node tests/run.js && node --test tests/modernization.test.js tests/build.test.js tests/profiles.test.js tests/security.test.js",
     "build:app": "npm run build:main && npm run build:renderer && node tools/check-renderer.js",
     "package:all": "electron-builder -wml --publish never",
     "package:win": "electron-builder -w --publish never",

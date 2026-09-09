@@ -16,19 +16,23 @@ export function isWindowEvent(
   event: Pick<IpcMainEvent | IpcMainInvokeEvent, 'sender' | 'senderFrame'>,
   window: BrowserWindow | null | undefined,
 ): boolean {
-  return Boolean(
-    window &&
-    !window.isDestroyed() &&
-    !event.sender.isDestroyed() &&
-    event.sender === window.webContents &&
-    event.senderFrame === event.sender.mainFrame,
-  );
+  // Electron frame getters may throw after a frame has been disposed.
+  // A missing frame must never compare equal to another missing frame.
+  try {
+    if (!window || window.isDestroyed() || event.sender.isDestroyed() ||
+      event.sender !== window.webContents) return false;
+    const frame = event.senderFrame;
+    return frame != null && frame === event.sender.mainFrame;
+  } catch {
+    return false;
+  }
 }
 
 /** Defense in depth for the legacy Node-enabled renderers, not a sandbox. */
 export function protectWebContents(contents: WebContents): void {
   contents.setWindowOpenHandler(() => ({ action: 'deny' }));
   contents.on('will-navigate', (event) => event.preventDefault());
+  contents.on('will-frame-navigate', (event) => event.preventDefault());
   contents.on('will-redirect', (event) => event.preventDefault());
   contents.on('will-attach-webview', (event) => event.preventDefault());
 }
