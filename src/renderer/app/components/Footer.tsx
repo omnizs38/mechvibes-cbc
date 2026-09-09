@@ -1,6 +1,4 @@
 type Props = {
-  debugOptionsAvailable: boolean;
-  onOpenDebugOptions: () => void;
   onOpenExternal: (url: string) => void;
 };
 
@@ -11,7 +9,7 @@ const LINKS = [
   { label: 'Donate', url: 'https://buymeacoff.ee/hainguyents13' },
 ];
 
-export function Footer({ debugOptionsAvailable, onOpenDebugOptions, onOpenExternal }: Props) {
+export function Footer({ onOpenExternal }: Props) {
   return (
     <footer className="app-footer">
       {LINKS.map((link) => (
@@ -26,11 +24,6 @@ export function Footer({ debugOptionsAvailable, onOpenDebugOptions, onOpenExtern
           {link.label}
         </a>
       ))}
-      {debugOptionsAvailable ? (
-        <button type="button" className="btn-ghost" onClick={onOpenDebugOptions}>
-          Advanced
-        </button>
-      ) : null}
     </footer>
   );
 }

@@ -5,7 +5,7 @@ import path from 'node:path';
 const root = path.resolve(__dirname, '..');
 const renderer = path.join(root, 'src', 'renderer-dist');
 const failures: string[] = [];
-for (const name of ['app', 'install', 'debug', 'editor']) {
+for (const name of ['app', 'install', 'editor']) {
   const htmlPath = path.join(renderer, `${name}.html`);
   if (!fs.existsSync(htmlPath)) {
     failures.push(`Missing ${name}.html`);
@@ -32,4 +32,4 @@ if (!fs.existsSync(path.join(root, 'src/preload.js'))) failures.push('Missing co
 if (failures.length) {
   console.error(failures.join('\n'));
   process.exitCode = 1;
-} else console.log('Verified all four renderer entry points, asset references, CSP and preload.');
+} else console.log('Verified all three renderer entry points, asset references, CSP and preload.');

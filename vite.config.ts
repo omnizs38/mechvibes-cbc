@@ -26,7 +26,6 @@ export default defineConfig({
       input: {
         app: path.resolve(rendererRoot, 'app.html'),
         editor: path.resolve(rendererRoot, 'editor.html'),
-        debug: path.resolve(rendererRoot, 'debug.html'),
         install: path.resolve(rendererRoot, 'install.html'),
       },
     },
