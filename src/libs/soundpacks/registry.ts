@@ -84,7 +84,9 @@ export function readSoundpackConfig(candidatePath: string): unknown {
   try {
     resolvedConfig = fs.realpathSync(configPath);
   } catch (error) {
-    if (error.code === 'ENOENT') throw new Error('Soundpack folder does not contain config.json.');
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      throw new Error('Soundpack folder does not contain config.json.');
+    }
     throw error;
   }
   if (!resolvedConfig.startsWith(`${root}${path.sep}`)) {
