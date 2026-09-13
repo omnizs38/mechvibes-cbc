@@ -273,6 +273,12 @@ export class UpdateService {
     this.state.channel = channel;
     this.autoUpdater.channel = channel === 'beta' ? 'beta' : 'latest';
     this.autoUpdater.allowPrerelease = channel === 'beta';
+    // Let a prerelease (beta) build move back to the stable Release channel even
+    // when the newest stable version sorts lower than the installed prerelease.
+    // Without this, beta testers stay stranded on a higher prerelease and never
+    // receive the stable release.
+    this.autoUpdater.allowDowngrade =
+      channel === 'stable' && this.app.getVersion().includes('-');
     if (persist) this.store.set('mechvibes-update-channel', channel);
     this.emitState();
   }

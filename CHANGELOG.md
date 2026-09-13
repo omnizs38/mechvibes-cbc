@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.0.0-beta.1 — unreleased
+## 3.0.0-beta.1 \u2014 unreleased
 
 ### Desktop
 - Named sound profiles for soundpack, volume and output device; apply, delete,
@@ -15,6 +15,12 @@
   by a newly created callback on every render.
 - Visible startup/discovery failure messages instead of an unhandled promise;
   reject non-finite volume changes. Increase the main window's starting size.
+- Separate **Beta** and **Release** update channels with clearer labels in the
+  updater card. The updater now allows a beta/prerelease build to move back to
+  the stable Release channel instead of getting stranded on a higher prerelease
+  version, fixing stuck cloud update delivery for beta testers.
+- Flatter, more minimal main-window keycap styling (no 3D bevel) closer to the
+  original app.
 
 ### Website
 - Minimal liquid-glass design with a new local SVG mark, restrained color,
@@ -30,6 +36,8 @@
 - Safe release-note DOM rendering retained; Cloudflare CSP/permissions headers,
   canonical/Open Graph metadata, robots and sitemap added. Correct upstream
   attribution (original MIT; fork modifications MPL-2.0).
+- README now uses the local project mark instead of the retired mechvibes.com
+  logo asset.
 
 ### Quality and compatibility
 - Profile/file/import/release-data tests and a dedicated Playwright/axe CI job
