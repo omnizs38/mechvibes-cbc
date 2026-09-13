@@ -2,7 +2,7 @@
 
 import fs from 'fs-extra';
 import path from 'path';
-import AdmZip from 'adm-zip';
+import { writeZipFile, type ZipWriterEntry } from './zip-writer';
 import { scanSoundpackDirectory, validateAudioFiles } from './soundpack-scanner';
 import { generateSoundpackConfig, validateGeneratedConfig } from './soundpack-config-generator';
 import type { SoundpackGeneratorOptions } from './soundpack-config-generator';
@@ -69,7 +69,7 @@ OPTIONS:
   --verbose                Print detailed output
 
 EXAMPLES:
-  npm run build:soundpack -- --input ./my-pack --name "Cherry MX" --author "Me"
+  npm run build:soundpack -- --input ./my-pack --name \"Cherry MX\" --author \"Me\"
   npm run build:soundpack -- --input ./sounds --output ./pack.mechvibes --verbose
 `);
 }
@@ -95,13 +95,13 @@ async function buildSoundpack(options: BuildOptions): Promise<void> {
 
   try {
     if (options.verbose) {
-      console.log(`📦 Building soundpack: ${options.name}`);
+      console.log(`\ud83d\udce6 Building soundpack: ${options.name}`);
       console.log(`   Input: ${inputDir}`);
       console.log(`   Output: ${outputPath}`);
     }
 
     // Step 1: Scan directory
-    if (options.verbose) console.log('\n📂 Scanning audio files...');
+    if (options.verbose) console.log('\n\ud83d\udcc2 Scanning audio files...');
     const scanned = await scanSoundpackDirectory(inputDir);
     console.log(`   Found ${scanned.files.length} audio files`);
     if (options.verbose) {
@@ -109,46 +109,45 @@ async function buildSoundpack(options: BuildOptions): Promise<void> {
     }
 
     // Step 2: Validate files
-    if (options.verbose) console.log('\n✓ Validating audio files...');
+    if (options.verbose) console.log('\n\u2713 Validating audio files...');
     const validationErrors = await validateAudioFiles(scanned.files);
     if (validationErrors.length > 0) {
-      console.error('❌ Validation errors:');
+      console.error('\u274c Validation errors:');
       validationErrors.forEach((e) => console.error(`   - ${e}`));
       process.exit(1);
     }
     console.log('   All files accessible');
 
     // Step 3: Generate config
-    if (options.verbose) console.log('\n⚙️  Generating soundpack config...');
+    if (options.verbose) console.log('\n\u2699\ufe0f  Generating soundpack config...');
     const config = generateSoundpackConfig(scanned, options);
     const configErrors = validateGeneratedConfig(config);
     if (configErrors.length > 0) {
-      console.error('❌ Config validation errors:');
+      console.error('\u274c Config validation errors:');
       configErrors.forEach((e) => console.error(`   - ${e}`));
       process.exit(1);
     }
     console.log('   Config generated successfully');
 
     // Step 4: Create package
-    if (options.verbose) console.log('\n📦 Creating soundpack package...');
-    const zip = new AdmZip();
-
-    // Add config.json
-    zip.addFile('config.json', Buffer.from(JSON.stringify(config, null, 2)));
+    if (options.verbose) console.log('\n\ud83d\udce6 Creating soundpack package...');
+    const entries: ZipWriterEntry[] = [
+      ['config.json', Buffer.from(JSON.stringify(config, null, 2))],
+    ];
 
     // Add audio files
     for (const file of scanned.files) {
       const fileBuffer = await fs.readFile(file.path);
-      zip.addFile(file.relative, fileBuffer);
+      entries.push([file.relative, fileBuffer]);
     }
 
     // Write output
     await fs.ensureDir(path.dirname(outputPath));
-    zip.writeZip(outputPath);
+    writeZipFile(outputPath, entries);
     console.log(`   Package created: ${path.basename(outputPath)}`);
 
     // Step 5: Summary
-    console.log('\n✅ Soundpack built successfully!');
+    console.log('\n\u2705 Soundpack built successfully!');
     console.log(`\nDetails:`);
     console.log(`  Name: ${config.name}`);
     console.log(`  Author: ${config.author}`);
@@ -157,9 +156,9 @@ async function buildSoundpack(options: BuildOptions): Promise<void> {
     console.log(`\nTo use in mechvibes:`);
     console.log(`  1. Copy ${path.basename(outputPath)} to the soundpacks folder`);
     console.log(`  2. Restart mechvibes`);
-    console.log(`  3. Select "${config.name}" from the soundpack list`);
+    console.log(`  3. Select \"${config.name}\" from the soundpack list`);
   } catch (error) {
-    console.error(`❌ Error building soundpack:`, error instanceof Error ? error.message : String(error));
+    console.error(`\u274c Error building soundpack:`, error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 }

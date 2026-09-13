@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import Zip from 'adm-zip';
+import { writeZip } from './zip-fixture';
 import { SampleCache } from '../src/audio-engine/sample-cache';
 import { readResponseBuffer } from '../src/utils/installer';
 import { filterPacks, readFavoriteIds } from '../src/utils/pack-library';
@@ -270,9 +270,7 @@ test('ZIP updates at the same path invalidate audio/config data', () =>
   temporary((root) => {
     const target = path.join(root, 'pack.zip');
     const write = (name: string) => {
-      const zip = new Zip();
-      zip.addFile('config.json', Buffer.from(JSON.stringify({ name })));
-      zip.writeZip(target);
+      writeZip(target, [['config.json', Buffer.from(JSON.stringify({ name }))]]);
     };
     write('before');
     assert.equal(JSON.parse(GetFileFromArchive(target, 'config.json')!).name, 'before');
@@ -284,10 +282,10 @@ test('ZIP updates at the same path invalidate audio/config data', () =>
 test('ZIPs reject duplicate case-insensitive paths', () =>
   temporary((root) => {
     const target = path.join(root, 'duplicate.zip');
-    const zip = new Zip();
-    zip.addFile('config.json', Buffer.from('{}'));
-    zip.addFile('CONFIG.JSON', Buffer.from('{}'));
-    zip.writeZip(target);
+    writeZip(target, [
+      ['config.json', Buffer.from('{}')],
+      ['CONFIG.JSON', Buffer.from('{}')],
+    ]);
     assert.throws(() => GetFileFromArchive(target, 'config.json'), /Duplicate archive path/);
   }));
 
