@@ -1,0 +1,52 @@
+name: Rebuild dependencies
+
+# Regenerates package-lock.json and rebuilds native modules against the current
+# Electron version. Run it manually after bumping a dependency (for example the
+# Electron 44 upgrade) so the lockfile and native prebuilds match package.json.
+# The refreshed lockfile is committed back to the branch the workflow runs on.
+on:
+  workflow_dispatch:
+
+# Only the newest run per branch matters; cancel superseded in-flight runs.
+concurrency:
+  group: rebuild-deps-${{ github.ref }}
+  cancel-in-progress: true
+
+# Needs write access to push the refreshed lockfile back to the branch.
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    name: Reinstall and rebuild native deps
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out branch
+        uses: actions/checkout@v7
+      - name: Use supported Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Install native X11 and build-essential header libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libxtst-dev libxext-dev libx11-xcb-dev libxkbcommon-dev libxkbcommon-x11-dev libxrandr-dev libxinerama-dev libxi-dev libxt-dev
+      - name: Reinstall dependencies and refresh the lockfile
+        run: npm install --no-audit --no-fund
+      - name: Rebuild native modules against Electron
+        run: npx --no-install electron-builder install-app-deps
+      - name: Verify the tree still builds and passes tests
+        run: npm run verify
+      - name: Commit the refreshed lockfile
+        run: |
+          if git diff --quiet -- package-lock.json; then
+            echo "package-lock.json is already up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "chore: regenerate package-lock.json for updated dependencies"
+          git push
