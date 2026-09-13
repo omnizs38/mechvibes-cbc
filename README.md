@@ -3,7 +3,7 @@
 > **3.0 beta development:** this branch prepares `3.0.0-beta.1`. See [the 3.0 guide](docs/version-3.md) and [changelog](CHANGELOG.md). Published downloads remain independent of this source version.
 
 <p align="center">
-  <img src="https://mechvibes.com/images/icon.png" alt="Mechvibes-cbc Logo" width="128">
+  <img src="https://raw.githubusercontent.com/omnizs38/mechvibes-cbc/main/public/mark.svg" alt="Mechvibes-cbc Logo" width="128">
 </p>
 
 <h3 align="center">A modern, open-source application that brings the sound of mechanical keyboards to any keyboard on Windows, macOS, and Linux.</h3>
@@ -79,20 +79,20 @@ On macOS, grant Accessibility/Input Monitoring permissions when requested.
 
 ## Features
 
-- 🎹 Realistic mechanical keyboard sound simulation
-- 🎵 Support for Soundpack v1, v2 and v3
-- ⚡ Low-latency Web Audio playback engine
-- 🎧 Output device selection
-- 🎚️ Named sound profiles with validated JSON export/import
-- 🔇 Quick mute from the main window, tray or hotkey
-- 🌙 Dark mode support
-- 📦 ZIP import, validated installation with cancellation, and soundpack management
-- ⭐ Persistent favorites and multi-word search by name, group or ID
-- 🖱️ Keyboard and mouse sound support
-- 🔄 Stable and beta update channels
-- 🪟 Improved Windows compatibility
-- 🚀 Modern Electron runtime
-- 🛠️ Continuous fixes and improvements
+- \ud83c\udfb9 Realistic mechanical keyboard sound simulation
+- \ud83c\udfb5 Support for Soundpack v1, v2 and v3
+- \u26a1 Low-latency Web Audio playback engine
+- \ud83c\udfa7 Output device selection
+- \ud83c\udf9a\ufe0f Named sound profiles with validated JSON export/import
+- \ud83d\udd07 Quick mute from the main window, tray or hotkey
+- \ud83c\udf19 Dark mode support
+- \ud83d\udce6 ZIP import, validated installation with cancellation, and soundpack management
+- \u2b50 Persistent favorites and multi-word search by name, group or ID
+- \ud83d\udda5\ufe0f Keyboard and mouse sound support
+- \ud83d\udd04 Release and beta update channels
+- \ud83e\ude9f Improved Windows compatibility
+- \ud83d\ude80 Modern Electron runtime
+- \ud83d\udee0\ufe0f Continuous fixes and improvements
 
 ---
 
@@ -138,7 +138,7 @@ Run the installer and enjoy.
 | Desktop shell | Electron 43 |
 | Main process | TypeScript 7, compiled with `tsc` to CommonJS next to the sources |
 | Renderer | React 19 + TypeScript, bundled by Vite into `src/renderer-dist/` |
-| Windows | `app`, `install`, `debug`, `editor` — one HTML entry point each |
+| Windows | `app`, `install`, `debug`, `editor` \u2014 one HTML entry point each |
 | Audio | Web Audio engine with sample cache, voice pool and latency tracking |
 | Global input | `uiohook-napi` |
 | Packaging | electron-builder (NSIS, DMG, deb/snap/AppImage) |
@@ -208,7 +208,7 @@ Contributions are welcome.
 
 If you find a bug or have an idea for a new feature, feel free to open an issue or submit a pull request.
 
-Before opening a pull request, run `npm run verify` — the same script gates CI on Node 22 and 24.
+Before opening a pull request, run `npm run verify` \u2014 the same script gates CI on Node 22 and 24.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development checks and [SECURITY.md](SECURITY.md) for the security model.
 The [3.0 guide](docs/version-3.md) covers profiles and website development.
 The [modernization notes](docs/modernization.md) include behavior changes and the native-platform test checklist.
