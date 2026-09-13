@@ -4,10 +4,10 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import mime from 'mime-types';
-import Zip from 'adm-zip';
+import { ZipArchive, type ZipEntry } from './zip-reader';
 import { normalizeSoundReference } from './validation';
 
-type ArchiveEntry = Zip.IZipEntry;
+type ArchiveEntry = ZipEntry;
 
 export const MAX_ARCHIVE_BYTES = 256 * 1024 * 1024;
 export const MAX_ARCHIVE_ENTRIES = 4096;
@@ -63,8 +63,7 @@ function openArchive(folder: string): ArchiveEntry[] {
   if (cached && cached.size === stat.size && cached.mtimeMs === stat.mtimeMs) {
     return cached.entries;
   }
-  const archive = new Zip(folder);
-  const entries = archive.getEntries();
+  const entries = new ZipArchive(folder).getEntries();
   if (entries.length > MAX_ARCHIVE_ENTRIES) {
     throw new Error(`Soundpack archive exceeds the ${MAX_ARCHIVE_ENTRIES} entry limit.`);
   }
