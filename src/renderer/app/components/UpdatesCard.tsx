@@ -18,7 +18,7 @@ export function UpdatesCard({ updater }: Props) {
           onClick={updater.check}
           disabled={updater.isBusy}
         >
-          {updater.isBusy ? 'Working…' : 'Check now'}
+          {updater.isBusy ? 'Working\u2026' : 'Check now'}
         </button>
       </div>
 
@@ -26,7 +26,9 @@ export function UpdatesCard({ updater }: Props) {
         <div className="field-label">
           <label htmlFor="update-channel">Channel</label>
           <span className="hint">
-            {updater.channel === 'beta' ? 'Pre-releases included' : 'Stable releases only'}
+            {updater.channel === 'beta'
+              ? 'Beta \u2014 pre-releases included'
+              : 'Release \u2014 stable builds only'}
           </span>
         </div>
         <select
@@ -36,7 +38,7 @@ export function UpdatesCard({ updater }: Props) {
           disabled={updater.isBusy}
           onChange={(event) => updater.setChannel(event.target.value)}
         >
-          <option value="stable">Stable</option>
+          <option value="stable">Release</option>
           <option value="beta">Beta</option>
         </select>
       </div>
