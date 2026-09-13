@@ -34,6 +34,12 @@ export interface EngineMetrics {
  * the public playback contract stable.
  */
 export class WebAudioEngine {
+  // `play` is called once per keystroke and must stay allocation-light. Settled
+  // promises are immutable, so the synchronous outcomes can share one instance
+  // each instead of constructing a new promise per event.
+  private static readonly PLAYED = Promise.resolve(true);
+  private static readonly SKIPPED = Promise.resolve(false);
+
   private readonly fetchImpl: SampleFetch;
   private readonly readSourceImpl: SampleReader | undefined;
   private readonly random: () => number;
@@ -120,7 +126,7 @@ export class WebAudioEngine {
 
   play(event: PlaybackEvent): Promise<boolean> {
     if (!this.manifest || !this.cache || !this.voicePool || !this.scheduler) {
-      return Promise.resolve(false);
+      return WebAudioEngine.SKIPPED;
     }
     this.metrics.playRequests += 1;
 
@@ -137,7 +143,7 @@ export class WebAudioEngine {
           this.isResuming = false;
         });
       }
-      return Promise.resolve(false);
+      return WebAudioEngine.SKIPPED;
     }
 
     return this.playInternal(event);
@@ -145,31 +151,33 @@ export class WebAudioEngine {
 
   private playInternal(event: PlaybackEvent): Promise<boolean> {
     if (!this.manifest || !this.cache || !this.voicePool || !this.scheduler) {
-      return Promise.resolve(false);
+      return WebAudioEngine.SKIPPED;
     }
 
     const eventKey = `${event.type}:${event.keycode}`;
     const layer = this.manifest.events[eventKey];
     if (!layer) {
       this.metrics.droppedEvents += 1;
-      return Promise.resolve(false);
+      return WebAudioEngine.SKIPPED;
     }
     const sample = this.selector.choose(eventKey, layer.samples, layer.mode);
     if (!sample) {
       this.metrics.droppedEvents += 1;
-      return Promise.resolve(false);
+      return WebAudioEngine.SKIPPED;
     }
 
+    const scheduler = this.scheduler;
     const cached = this.cache.get(sample.source);
     if (cached) {
-      this.record(this.scheduler.schedule(cached, sample, layer, event));
-      return Promise.resolve(true);
+      this.record(scheduler.schedule(cached, sample, layer, event));
+      return WebAudioEngine.PLAYED;
     }
     this.metrics.cacheMisses += 1;
-    const scheduler = this.scheduler;
     return this.cache.load(sample.source).then((buffer) => {
+      // A manifest reload swaps the scheduler; a buffer decoded for the
+      // previous pack must not be scheduled against the new graph.
       if (this.scheduler !== scheduler) return false;
-      this.record(this.scheduler.schedule(buffer, sample, layer, event));
+      this.record(scheduler.schedule(buffer, sample, layer, event));
       return true;
     });
   }

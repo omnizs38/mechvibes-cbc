@@ -27,10 +27,26 @@ export class SampleSelector<TSample = unknown> {
 
     let selected: TSample | undefined;
     if (mode === 'random') {
+      // Counting candidates and then walking to the chosen one avoids building
+      // a filtered array for every event. The distribution is identical to
+      // picking an index into that array, including the null result when every
+      // sample is the previously played one.
       const previous = this.lastSamples.get(eventKey);
-      const candidates = samples.filter((sample) => sample !== previous);
-      selected =
-        candidates[Math.min(candidates.length - 1, Math.floor(this.random() * candidates.length))];
+      let candidateCount = 0;
+      for (const sample of samples) {
+        if (sample !== previous) candidateCount += 1;
+      }
+      if (candidateCount === 0) return null;
+
+      let remaining = Math.min(candidateCount - 1, Math.floor(this.random() * candidateCount));
+      for (const sample of samples) {
+        if (sample === previous) continue;
+        if (remaining === 0) {
+          selected = sample;
+          break;
+        }
+        remaining -= 1;
+      }
     } else {
       const index = this.indices.get(eventKey) ?? 0;
       selected = samples[index % samples.length];

@@ -39,13 +39,25 @@ export class VoicePool {
     this.stolenVoices = 0;
   }
 
+  /**
+   * Picks the voice to sacrifice when the pool is saturated: lowest priority
+   * first, then the oldest start time. A single linear scan keeps the same
+   * result as sorting a materialised copy of the Set, without the array
+   * allocation or the O(n log n) sort, because strict comparisons keep the
+   * first candidate on ties exactly as the previous stable sort did.
+   */
   selectVoiceToSteal(): Voice | null {
-    return (
-      [...this.voices].sort((left, right) => {
-        if (left.priority !== right.priority) return left.priority - right.priority;
-        return left.startedAt - right.startedAt;
-      })[0] ?? null
-    );
+    let candidate: Voice | null = null;
+    for (const voice of this.voices) {
+      if (
+        candidate === null ||
+        voice.priority < candidate.priority ||
+        (voice.priority === candidate.priority && voice.startedAt < candidate.startedAt)
+      ) {
+        candidate = voice;
+      }
+    }
+    return candidate;
   }
 
   reserve({ source, priority = 0, startedAt = 0, onEnded = null }: VoiceRequest): Voice {
