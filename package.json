@@ -155,8 +155,8 @@
     "electron-updater": "^6.8.9",
     "fs-extra": "^11.4.0",
     "mime-types": "^3.0.2",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "uiohook-napi": "^1.5.5"
   },
   "devDependencies": {
@@ -165,8 +165,8 @@
     "@types/fs-extra": "^11.0.4",
     "@types/mime-types": "^3.0.1",
     "@types/node": "^26.5.1",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.7",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.1",
     "electron": "^44.3.0",
     "electron-builder": "^26.16.1",
