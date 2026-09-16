@@ -6,9 +6,6 @@ name: Rebuild dependencies
 # The refreshed lockfile is committed back to the branch the workflow runs on.
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - release-3.0.0-rc.1
 
 # Only the newest run per branch matters; cancel superseded in-flight runs.
 concurrency:
